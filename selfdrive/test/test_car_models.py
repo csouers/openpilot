@@ -136,6 +136,10 @@ routes = {
     'carFingerprint': HONDA.CRV,
     'enableCamera': True,
   },
+  "a859a044a447c2b0|2020-02-13--13-44-27": {
+    'carFingerprint': HONDA.CRV_EU,
+    'enableCamera': True,
+  },
   "1851183c395ef471|2018-05-31--18-07-21": {
     'carFingerprint': HONDA.CRV_5G,
     'enableCamera': True,
