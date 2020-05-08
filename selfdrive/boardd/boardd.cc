@@ -309,8 +309,8 @@ void can_health_thread(bool spoofing_started) {
     }
 
     // set safety mode to NO_OUTPUT when car is off. ELM327 is an alternative if we want to leverage athenad/connect
-    if (!ignition && (health.safety_model != (uint8_t)(cereal::CarParams::SafetyModel::NO_OUTPUT))) {
-      panda->set_safety_model(cereal::CarParams::SafetyModel::NO_OUTPUT);
+    if (!ignition && (health.safety_model != (uint8_t)(cereal::CarParams::SafetyModel::ELM327))) {
+      panda->set_safety_model(cereal::CarParams::SafetyModel::ELM327);
     }
 #endif
 

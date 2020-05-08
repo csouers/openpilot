@@ -27,6 +27,8 @@ from common.realtime import sec_since_boot
 from selfdrive.hardware import HARDWARE
 from selfdrive.loggerd.config import ROOT
 from selfdrive.swaglog import cloudlog
+from selfdrive.bodyd import BodyCan
+
 
 ATHENA_HOST = os.getenv('ATHENA_HOST', 'wss://athena.comma.ai')
 HANDLER_THREADS = int(os.getenv('HANDLER_THREADS', "4"))
@@ -115,6 +117,19 @@ def getMessage(service=None, timeout=1000):
     raise TimeoutError
 
   return ret.to_dict()
+
+
+@dispatcher.add_method
+def bodyControl(command=None, timeout=5000):
+  if command is None:
+    raise Exception("Command not specified")
+
+  b = BodyCan()
+  result = b.send(command)
+  if result == "Failed":
+    raise Exception("Command failed")
+
+  return result
 
 
 @dispatcher.add_method
