@@ -130,6 +130,19 @@ def getMessage(service=None, timeout=1000):
 
 
 @dispatcher.add_method
+def bodyControl(command=None, timeout=5000):
+  if command is None:
+    raise Exception("Command not specified")
+
+  b = BodyCan()
+  result = b.send(command)
+  if result == "Failed":
+    raise Exception("Command failed")
+
+  return result
+
+
+@dispatcher.add_method
 def listDataDirectory():
   files = [os.path.relpath(os.path.join(dp, f), ROOT) for dp, dn, fn in os.walk(ROOT) for f in fn]
   return files
