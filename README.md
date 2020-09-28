@@ -67,8 +67,8 @@ Supported Cars
 | Acura     | ILX 2016-19                   | AcuraWatch Plus   | openpilot        | 25mph<sup>1</sup>  | 25mph             |
 | Acura     | RDX 2016-18                   | AcuraWatch Plus   | openpilot        | 25mph<sup>1</sup>  | 12mph             |
 | Acura     | RDX 2020                      | All               | Stock            | 0mph               | 3mph              |
-| Honda     | Accord 2018-20                | All               | Stock            | 0mph               | 3mph              |
-| Honda     | Accord Hybrid 2018-20         | All               | Stock            | 0mph               | 3mph              |
+| Honda     | Accord 2018-21                | All               | Stock            | 0mph               | 3mph              |
+| Honda     | Accord Hybrid 2018-21         | All               | Stock            | 0mph               | 3mph              |
 | Honda     | Civic Hatchback 2017-21       | Honda Sensing     | Stock            | 0mph               | 12mph             |
 | Honda     | Civic Sedan/Coupe 2016-18     | Honda Sensing     | openpilot        | 0mph               | 12mph             |
 | Honda     | Civic Sedan/Coupe 2019-20     | All               | Stock            | 0mph               | 2mph<sup>2</sup>  |
@@ -80,6 +80,7 @@ Supported Cars
 | Honda     | Insight 2019-20               | All               | Stock            | 0mph               | 3mph              |
 | Honda     | Inspire 2018                  | All               | Stock            | 0mph               | 3mph              |
 | Honda     | Odyssey 2018-20               | Honda Sensing     | openpilot        | 25mph<sup>1</sup>  | 0mph              |
+| Honda     | Odyssey 2021                  | Honda Sensing     | Stock            | 0mph               | 45mph             |
 | Honda     | Passport 2019                 | All               | openpilot        | 25mph<sup>1</sup>  | 12mph             |
 | Honda     | Pilot 2016-19                 | Honda Sensing     | openpilot        | 25mph<sup>1</sup>  | 12mph             |
 | Honda     | Ridgeline 2017-20             | Honda Sensing     | openpilot        | 25mph<sup>1</sup>  | 12mph             |

@@ -1,5 +1,5 @@
 from selfdrive.config import Conversions as CV
-from selfdrive.car.honda.values import HONDA_BOSCH
+from selfdrive.car.honda.values import HONDA_BOSCH, HONDA_BOSCH_V2, CAR
 
 # CAN bus layout with relay
 # 0 = ACC-CAN - radar side
@@ -83,7 +83,15 @@ def create_steering_control(packer, apply_steer, lkas_active, car_fingerprint, i
   values = {
     "STEER_TORQUE": apply_steer if lkas_active else 0,
     "STEER_TORQUE_REQUEST": lkas_active,
-  }
+    }
+
+  # if car_fingerprint == CAR.ODYSSEY_BOSCH:
+  #   ext = {
+  #     "DISABLED_HIGH_SPEED": not lkas_active,
+  #     "ENABLED_FEEDBACK": lkas_active,  # this may really be some sort of feedback from the EPS. It has some lag from when STEER_TORQUE_REQUEST goes HI
+  #     }
+  #   values.update(ext)
+
   bus = get_lkas_cmd_bus(car_fingerprint, radar_disabled)
   return packer.make_can_msg("STEERING_CONTROL", bus, values, idx)
 
@@ -135,14 +143,33 @@ def create_ui_commands(packer, pcm_speed, hud, car_fingerprint, is_metric, idx, 
       }
     commands.append(packer.make_can_msg("ACC_HUD", bus_pt, acc_hud_values, idx))
 
-  lkas_hud_values = {
-    'SET_ME_X41': 0x41,
-    'SET_ME_X48': 0x48,
-    'STEERING_REQUIRED': hud.steer_required,
-    'SOLID_LANES': hud.lanes,
-    'BEEP': 0,
-  }
-  commands.append(packer.make_can_msg('LKAS_HUD', bus_lkas, lkas_hud_values, idx))
+  if car_fingerprint in HONDA_BOSCH_V2 and not openpilot_longitudinal_control:
+    lkas_hud_values = {
+      'SET_ME_X41': 1 if hud.lanes else 0,  # TODO: rename this later
+      'SET_ME_X01': 1,
+      # 'SET_ME_X48': 0x48,
+      'STEERING_REQUIRED': hud.steer_required,
+      'SOLID_LANES': hud.lanes,
+      'BEEP': 0,
+    }
+    commands.append(packer.make_can_msg('LKAS_HUD_A', bus_lkas, lkas_hud_values, idx))
+
+    # LKAS_HUD_B is an 8 byte copy of LKAS_HUD_A with additional signals in bytes 5-6
+    # extended = {
+    #   'LANES_RECOGNIZED': 3 if hud.lanes else 0
+    # }
+    # lkas_hud_values.update(extended)
+    commands.append(packer.make_can_msg('LKAS_HUD_B', bus_lkas, lkas_hud_values, idx))
+
+  else:
+    lkas_hud_values = {
+      'SET_ME_X41': 0x41,
+      'SET_ME_X48': 0x48,
+      'STEERING_REQUIRED': hud.steer_required,
+      'SOLID_LANES': hud.lanes,
+      'BEEP': 0,
+    }
+    commands.append(packer.make_can_msg('LKAS_HUD', bus_lkas, lkas_hud_values, idx))
 
   if radar_disabled and car_fingerprint in HONDA_BOSCH:
     radar_hud_values = {

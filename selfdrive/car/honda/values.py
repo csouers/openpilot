@@ -25,8 +25,10 @@ VISUAL_HUD = {
 
 class CAR:
   ACCORD = "HONDA ACCORD 2018 SPORT 2T"
+  ACCORD_V2 = "HONDA ACCORD 2021 TOURING 2T"
   ACCORD_15 = "HONDA ACCORD 2018 LX 1.5T"
   ACCORDH = "HONDA ACCORD 2018 HYBRID TOURING"
+  ACCORDH_V2 = "HONDA ACCORD 2021 HYBRID"
   CIVIC = "HONDA CIVIC 2016 TOURING"
   CIVIC_BOSCH = "HONDA CIVIC HATCHBACK 2017 SEDAN/COUPE 2019"
   CIVIC_BOSCH_DIESEL = "HONDA CIVIC SEDAN 1.6 DIESEL"
@@ -39,6 +41,7 @@ class CAR:
   HRV = "HONDA HRV 2019 TOURING"
   ODYSSEY = "HONDA ODYSSEY 2018 EX-L"
   ODYSSEY_CHN = "HONDA ODYSSEY 2019 EXCLUSIVE CHN"
+  ODYSSEY_BOSCH = "HONDA ODYSSEY 2021 TOURING"
   ACURA_RDX = "ACURA RDX 2018 ACURAWATCH PLUS"
   ACURA_RDX_3G = "ACURA RDX 2020 TECH"
   PILOT = "HONDA PILOT 2017 TOURING"
@@ -114,6 +117,10 @@ FINGERPRINTS = {
   CAR.ODYSSEY_CHN: [{
     57: 3, 145: 8, 316: 8, 342: 6, 344: 8, 380: 8, 398: 3, 399: 7, 401: 8, 404: 4, 411: 5, 420: 8, 422: 8, 423: 2, 426: 8, 432: 7, 450: 8, 464: 8, 490: 8, 506: 8, 507: 1, 512: 6, 513: 6, 597: 8, 610: 8, 611: 8, 612: 8, 617: 8, 660: 8, 661: 4, 773: 7, 780: 8, 804: 8, 808: 8, 829: 5, 862: 8, 884: 7, 892: 8, 923: 2, 929: 8, 1030: 5, 1137: 8, 1302: 8, 1348: 5, 1361: 5, 1365: 5, 1600: 5, 1601: 8, 1639: 8
   }],
+  # 2021 Odyssey (on bus 1)
+  CAR.ODYSSEY_BOSCH: [{
+    57: 3, 148: 8, 228: 5, 231: 5, 304: 8, 342: 6, 344: 8, 380: 8, 399: 7, 411: 5, 419: 8, 420: 8, 427: 3, 428: 8, 432: 7, 441: 5, 446: 3, 450: 8, 463: 8, 464: 8, 469: 3, 476: 4, 477: 8, 479: 8, 495: 8, 542: 7, 545: 7, 597: 8, 662: 4, 773: 7, 777: 8, 780: 8, 795: 8, 800: 8, 804: 8, 806: 8, 808: 8, 817: 4, 819: 7, 821: 5, 825: 5, 829: 5, 856: 7, 862: 8, 871: 8, 881: 8, 882: 4, 884: 8, 891: 8, 923: 2, 927: 8, 929: 8, 983: 8, 1029: 8, 1064: 7, 1088: 8, 1089: 8, 1108: 8, 1125: 8, 1296: 8, 1302: 8, 1445: 8, 1600: 5, 1601: 8, 1612: 5, 1613: 5, 1614: 5, 1616: 5, 1617: 8, 1619: 5, 1623: 5, 1652: 8, 1668: 5, 1670: 5
+  }],
   # 2017 Pilot Touring AND 2016 Pilot EX-L w/ Added Comma Pedal Support (512L & 513L)
   CAR.PILOT: [{
     57: 3, 145: 8, 228: 5, 229: 4, 308: 5, 316: 8, 334: 8, 339: 7, 342: 6, 344: 8, 379: 8, 380: 8, 392: 6, 399: 7, 419: 8, 420: 8, 422: 8, 425: 8, 426: 8, 427: 3, 432: 7, 463: 8, 464: 8, 476: 4, 490: 8, 506: 8, 507: 1, 512: 6, 513: 6, 538: 3, 542: 7, 545: 5, 546: 3, 597: 8, 660: 8, 773: 7, 777: 8, 780: 8, 795: 8, 800: 8, 804: 8, 808: 8, 819: 7, 821: 5, 829: 5, 837: 5, 856: 7, 871: 8, 882: 2, 884: 7, 891: 8, 892: 8, 923: 2, 929: 8, 963: 8, 965: 8, 966: 8, 967: 8, 983: 8, 985: 3, 1027: 5, 1029: 8, 1036: 8, 1039: 8, 1064: 7, 1088: 8, 1089: 8, 1108: 8, 1125: 8, 1296: 8, 1424: 5, 1600: 5, 1601: 8, 1612: 5, 1613: 5, 1616: 5, 1618: 5, 1668: 5
@@ -141,7 +148,7 @@ FINGERPRINTS = {
 }
 
 # Don't use theses fingerprints for fingerprinting, they are still needed for ECU detection
-IGNORED_FINGERPRINTS = [CAR.INSIGHT, CAR.CIVIC_BOSCH_DIESEL, CAR.CRV_EU, CAR.HRV, CAR.ACURA_RDX_3G]
+IGNORED_FINGERPRINTS = [CAR.INSIGHT, CAR.CIVIC_BOSCH_DIESEL, CAR.CRV_EU, CAR.HRV, CAR.ACURA_RDX_3G, CAR.ODYSSEY_BOSCH, CAR.ACCORD_V2, CAR.ACCORDH_V2]
 
 # add DIAG_MSGS to fingerprints
 for c in FINGERPRINTS:
@@ -315,7 +322,6 @@ FW_VERSIONS = {
       b'78109-TWA-A120\x00\x00',
       b'78109-TWA-A210\x00\x00',
       b'78109-TWA-A220\x00\x00',
-
     ],
     (Ecu.shiftByWire, 0x18da0bf1, None): [
       b'54008-TWA-A910\x00\x00',
@@ -333,6 +339,73 @@ FW_VERSIONS = {
     (Ecu.eps, 0x18da30f1, None): [
       b'39990-TVA-A160\x00\x00',
       b'39990-TVA-A150\x00\x00',
+    ],
+  },
+  CAR.ACCORD_V2: {
+    (Ecu.programmedFuelInjection, 0x18da10f1, None): [
+      b'37805-6B2-C520\x00\x00',
+    ],
+    (Ecu.transmission, 0x18da1ef1, None): [
+      b'28102-6B8-A700\x00\x00',
+    ],
+    (Ecu.electricBrakeBooster, 0x18da2bf1, None): [
+      b'46114-TVA-A320\x00\x00',
+    ],
+    (Ecu.gateway, 0x18daeff1, None): [
+      b'38897-TVA-A020\x00\x00',
+    ],
+    (Ecu.vsa, 0x18da28f1, None): [
+      b'57114-TVA-E520\x00\x00',
+    ],
+    (Ecu.srs, 0x18da53f1, None): [
+      b'77959-TVA-L420\x00\x00',
+    ],
+    (Ecu.combinationMeter, 0x18da60f1, None): [
+      b'78109-TVC-A230\x00\x00',
+    ],
+    (Ecu.hud, 0x18da61f1, None): [
+      b'78209-TVA-A110\x00\x00',
+    ],
+    (Ecu.shiftByWire, 0x18da0bf1, None): [
+      b'54008-TVC-A910\x00\x00',
+    ],
+    (Ecu.fwdCamera, 0x18dab5f1, None): [
+      b'36161-TVC-A330\x00\x00',
+    ],
+    (Ecu.fwdRadar, 0x18dab0f1, None): [
+      b'36802-TVC-A330\x00\x00',
+    ],
+    (Ecu.eps, 0x18da30f1, None): [
+      b'39990-TVA-A340\x00\x00',
+    ],
+    (Ecu.unknown, 0x18da3af1, None): [
+      b'39390-TVA-A120\x00\x00',
+    ],
+  },
+  CAR.ACCORDH_V2: {
+    (Ecu.gateway, 0x18daeff1, None): [
+      b'38897-TWD-J020\x00\x00',
+    ],
+    (Ecu.vsa, 0x18da28f1, None): [
+      b'57114-TWA-A530\x00\x00',
+    ],
+    (Ecu.srs, 0x18da53f1, None): [
+      b'77959-TWA-L420\x00\x00',
+    ],
+    (Ecu.combinationMeter, 0x18da60f1, None): [
+      b'78109-TWA-A230\x00\x00',
+    ],
+    (Ecu.shiftByWire, 0x18da0bf1, None): [
+      b'54008-TWA-A910\x00\x00',
+    ],
+    (Ecu.fwdCamera, 0x18dab5f1, None): [
+      b'36161-TWA-A330\x00\x00',
+    ],
+    (Ecu.fwdRadar, 0x18dab0f1, None): [
+      b'36802-TWA-A330\x00\x00',
+    ],
+    (Ecu.eps, 0x18da30f1, None): [
+      b'39990-TVA-A340\x00\x00',
     ],
   },
   CAR.CIVIC: {
@@ -796,6 +869,19 @@ FW_VERSIONS = {
       b'54008-THR-A020\x00\x00',
     ],
   },
+  CAR.ODYSSEY_BOSCH: {
+    (Ecu.programmedFuelInjection, 0x18da10f1, None): [b'37805-5MR-C730\x00\x00'],
+    (Ecu.transmission, 0x18da1ef1, None): [b'28102-5MX-A100\x00\x00'],
+    (Ecu.electricBrakeBooster, 0x18da2bf1, None): [b'46114-THR-A530\x00\x00'],
+    (Ecu.gateway, 0x18daeff1, None): [b'38897-THR-A130\x00\x00'],
+    (Ecu.eps, 0x18da30f1, None): [b'39990-THR-A050\x00\x00'],
+    (Ecu.fwdRadar, 0x18dab0f1, None): [b'36802-THR-A220\x00\x00'],
+    (Ecu.fwdCamera, 0x18dab5f1, None): [b'36161-THR-A220\x00\x00'],
+    (Ecu.shiftByWire, 0x18da0bf1, None): [b'54008-THR-A310\x00\x00'],
+    (Ecu.srs, 0x18da53f1, None): [b'77959-THR-A220\x00\x00'],
+    (Ecu.vsa, 0x18da28f1, None): [b'57114-THR-A230\x00\x00'],
+    (Ecu.combinationMeter, 0x18da60f1, None): [b'78109-THR-AS10\x00\x00'],
+  },
   CAR.PILOT: {
     (Ecu.shiftByWire, 0x18da0bf1, None): [
       b'54008-TG7-A520\x00\x00',
@@ -1021,8 +1107,10 @@ FW_VERSIONS = {
 
 DBC = {
   CAR.ACCORD: dbc_dict('honda_accord_s2t_2018_can_generated', None),
+  CAR.ACCORD_V2: dbc_dict('honda_accord_s2t_2021_can_generated', None),
   CAR.ACCORD_15: dbc_dict('honda_accord_lx15t_2018_can_generated', None),
   CAR.ACCORDH: dbc_dict('honda_accord_s2t_2018_can_generated', None),
+  CAR.ACCORDH_V2: dbc_dict('honda_accord_s2t_2021_can_generated', None),
   CAR.ACURA_ILX: dbc_dict('acura_ilx_2016_can_generated', 'acura_ilx_2016_nidec'),
   CAR.ACURA_RDX: dbc_dict('acura_rdx_2018_can_generated', 'acura_ilx_2016_nidec'),
   CAR.ACURA_RDX_3G: dbc_dict('acura_rdx_2020_can_generated', None),
@@ -1037,6 +1125,7 @@ DBC = {
   CAR.HRV: dbc_dict('honda_hrv_touring_2019_can_generated', 'acura_ilx_2016_nidec'),
   CAR.ODYSSEY: dbc_dict('honda_odyssey_exl_2018_generated', 'acura_ilx_2016_nidec'),
   CAR.ODYSSEY_CHN: dbc_dict('honda_odyssey_extreme_edition_2018_china_can_generated', 'acura_ilx_2016_nidec'),
+  CAR.ODYSSEY_BOSCH: dbc_dict('honda_odyssey_touring_2021_can_generated', None),
   CAR.PILOT: dbc_dict('honda_pilot_touring_2017_can_generated', 'acura_ilx_2016_nidec'),
   CAR.PILOT_2019: dbc_dict('honda_pilot_touring_2017_can_generated', 'acura_ilx_2016_nidec'),
   CAR.RIDGELINE: dbc_dict('honda_ridgeline_black_edition_2017_can_generated', 'acura_ilx_2016_nidec'),
@@ -1045,8 +1134,10 @@ DBC = {
 
 STEER_THRESHOLD = {
   CAR.ACCORD: 1200,
+  CAR.ACCORD_V2: 1200,
   CAR.ACCORD_15: 1200,
   CAR.ACCORDH: 1200,
+  CAR.ACCORDH_V2: 1200,
   CAR.ACURA_ILX: 1200,
   CAR.ACURA_RDX: 400,
   CAR.ACURA_RDX_3G: 1200,
@@ -1061,6 +1152,7 @@ STEER_THRESHOLD = {
   CAR.HRV: 1200,
   CAR.ODYSSEY: 1200,
   CAR.ODYSSEY_CHN: 1200,
+  CAR.ODYSSEY_BOSCH: 1200,
   CAR.PILOT: 1200,
   CAR.PILOT_2019: 1200,
   CAR.RIDGELINE: 1200,
@@ -1069,8 +1161,10 @@ STEER_THRESHOLD = {
 
 SPEED_FACTOR = {
   CAR.ACCORD: 1.,
+  CAR.ACCORD_V2: 1.,
   CAR.ACCORD_15: 1.,
   CAR.ACCORDH: 1.,
+  CAR.ACCORDH_V2: 1.,
   CAR.ACURA_ILX: 1.,
   CAR.ACURA_RDX: 1.,
   CAR.ACURA_RDX_3G: 1.,
@@ -1085,10 +1179,12 @@ SPEED_FACTOR = {
   CAR.HRV: 1.025,
   CAR.ODYSSEY: 1.,
   CAR.ODYSSEY_CHN: 1.,
+  CAR.ODYSSEY_BOSCH: 1.,
   CAR.PILOT: 1.,
   CAR.PILOT_2019: 1.,
   CAR.RIDGELINE: 1.,
   CAR.INSIGHT: 1.,
 }
 
-HONDA_BOSCH = set([CAR.ACCORD, CAR.ACCORD_15, CAR.ACCORDH, CAR.CIVIC_BOSCH, CAR.CIVIC_BOSCH_DIESEL, CAR.CRV_5G, CAR.CRV_HYBRID, CAR.INSIGHT, CAR.ACURA_RDX_3G])
+HONDA_BOSCH = set([CAR.ACCORD, CAR.ACCORD_V2, CAR.ACCORD_15, CAR.ACCORDH, CAR.ACCORDH_V2, CAR.CIVIC_BOSCH, CAR.CIVIC_BOSCH_DIESEL, CAR.CRV_5G, CAR.CRV_HYBRID, CAR.INSIGHT, CAR.ACURA_RDX_3G, CAR.ODYSSEY_BOSCH])
+HONDA_BOSCH_V2 = set([CAR.ACCORD_V2, CAR.ACCORDH_V2])

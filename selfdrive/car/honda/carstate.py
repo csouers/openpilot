@@ -70,7 +70,7 @@ def get_can_signals(CP):
       ("SCM_BUTTONS", 25),
     ]
 
-  if CP.carFingerprint in (CAR.CRV_HYBRID, CAR.CIVIC_BOSCH_DIESEL, CAR.ACURA_RDX_3G):
+  if CP.carFingerprint in (CAR.CRV_HYBRID, CAR.CIVIC_BOSCH_DIESEL, CAR.ACURA_RDX_3G, CAR.ODYSSEY_BOSCH):
     checks += [
       ("GEARBOX", 50),
     ]
@@ -81,7 +81,7 @@ def get_can_signals(CP):
 
   if CP.carFingerprint in HONDA_BOSCH:
     # Civic is only bosch to use the same brake message as other hondas.
-    if CP.carFingerprint not in (CAR.ACCORDH, CAR.CIVIC_BOSCH, CAR.CIVIC_BOSCH_DIESEL, CAR.CRV_HYBRID, CAR.INSIGHT):
+    if CP.carFingerprint not in (CAR.ACCORDH, CAR.ACCORDH_V2, CAR.CIVIC_BOSCH, CAR.CIVIC_BOSCH_DIESEL, CAR.CRV_HYBRID, CAR.INSIGHT):
       signals += [("BRAKE_PRESSED", "BRAKE_MODULE", 0)]
       checks += [("BRAKE_MODULE", 50)]
     signals += [("CAR_GAS", "GAS_PEDAL_2", 0),
@@ -106,7 +106,7 @@ def get_can_signals(CP):
       checks += [("CRUISE_PARAMS", 10)]
     else:
       checks += [("CRUISE_PARAMS", 50)]
-  if CP.carFingerprint in (CAR.ACCORD, CAR.ACCORD_15, CAR.ACCORDH, CAR.CIVIC_BOSCH, CAR.CIVIC_BOSCH_DIESEL, CAR.CRV_HYBRID, CAR.INSIGHT, CAR.ACURA_RDX_3G):
+  if CP.carFingerprint in (CAR.ACCORD, CAR.ACCORD_V2, CAR.ACCORD_15, CAR.ACCORDH, CAR.ACCORDH_V2, CAR.CIVIC_BOSCH, CAR.CIVIC_BOSCH_DIESEL, CAR.CRV_HYBRID, CAR.INSIGHT, CAR.ACURA_RDX_3G, CAR.ODYSSEY_BOSCH):
     signals += [("DRIVERS_DOOR_OPEN", "SCM_FEEDBACK", 1)]
   elif CP.carFingerprint == CAR.ODYSSEY_CHN:
     signals += [("DRIVERS_DOOR_OPEN", "SCM_BUTTONS", 1)]
@@ -188,7 +188,7 @@ class CarState(CarStateBase):
 
     # ******************* parse out can *******************
     # TODO: find wheels moving bit in dbc
-    if self.CP.carFingerprint in (CAR.ACCORD, CAR.ACCORD_15, CAR.ACCORDH, CAR.CIVIC_BOSCH, CAR.CIVIC_BOSCH_DIESEL, CAR.CRV_HYBRID, CAR.INSIGHT, CAR.ACURA_RDX_3G):
+    if self.CP.carFingerprint in (CAR.ACCORD, CAR.ACCORD_V2, CAR.ACCORD_15, CAR.ACCORDH, CAR.ACCORDH_V2, CAR.CIVIC_BOSCH, CAR.CIVIC_BOSCH_DIESEL, CAR.CRV_HYBRID, CAR.INSIGHT, CAR.ACURA_RDX_3G, CAR.ODYSSEY_BOSCH):
       ret.standstill = cp.vl["ENGINE_DATA"]['XMISSION_SPEED'] < 0.1
       ret.doorOpen = bool(cp.vl["SCM_FEEDBACK"]['DRIVERS_DOOR_OPEN'])
     elif self.CP.carFingerprint == CAR.ODYSSEY_CHN:
@@ -237,7 +237,7 @@ class CarState(CarStateBase):
     ret.rightBlinker = cp.vl["SCM_FEEDBACK"]['RIGHT_BLINKER'] != 0
     self.brake_hold = cp.vl["VSA_STATUS"]['BRAKE_HOLD_ACTIVE']
 
-    if self.CP.carFingerprint in (CAR.CIVIC, CAR.ODYSSEY, CAR.CRV_5G, CAR.ACCORD, CAR.ACCORD_15, CAR.ACCORDH, CAR.CIVIC_BOSCH,
+    if self.CP.carFingerprint in (CAR.CIVIC, CAR.ODYSSEY, CAR.ODYSSEY_BOSCH, CAR.CRV_5G, CAR.ACCORD, CAR.ACCORD_V2, CAR.ACCORD_15, CAR.ACCORDH, CAR.ACCORDH_V2, CAR.CIVIC_BOSCH,
                                   CAR.CIVIC_BOSCH_DIESEL, CAR.CRV_HYBRID, CAR.INSIGHT, CAR.ACURA_RDX_3G):
       self.park_brake = cp.vl["EPB_STATUS"]['EPB_STATE'] != 0
       main_on = cp.vl["SCM_FEEDBACK"]['MAIN_ON']
@@ -277,7 +277,7 @@ class CarState(CarStateBase):
       self.cruise_mode = cp.vl["ACC_HUD"]['CRUISE_CONTROL_LABEL']
       ret.cruiseState.standstill = cp.vl["ACC_HUD"]['CRUISE_SPEED'] == 252.
       ret.cruiseState.speedOffset = calc_cruise_offset(0, ret.vEgo)
-      if self.CP.carFingerprint in (CAR.CIVIC_BOSCH, CAR.CIVIC_BOSCH_DIESEL, CAR.ACCORDH, CAR.CRV_HYBRID, CAR.INSIGHT):
+      if self.CP.carFingerprint in (CAR.CIVIC_BOSCH, CAR.CIVIC_BOSCH_DIESEL, CAR.ACCORDH, CAR.ACCORDH_V2, CAR.CRV_HYBRID, CAR.INSIGHT):
         ret.brakePressed = cp.vl["POWERTRAIN_DATA"]['BRAKE_PRESSED'] != 0 or \
                           (self.brake_switch and self.brake_switch_prev and
                           cp.ts["POWERTRAIN_DATA"]['BRAKE_SWITCH'] != self.brake_switch_ts)
@@ -286,7 +286,10 @@ class CarState(CarStateBase):
       else:
         ret.brakePressed = cp.vl["BRAKE_MODULE"]['BRAKE_PRESSED'] != 0
       # On set, cruise set speed pulses between 254~255 and the set speed prev is set to avoid this.
-      ret.cruiseState.speed = self.v_cruise_pcm_prev if cp.vl["ACC_HUD"]['CRUISE_SPEED'] > 160.0 else cp.vl["ACC_HUD"]['CRUISE_SPEED'] * CV.KPH_TO_MS
+      if self.CP.carFingerprint == CAR.ODYSSEY_BOSCH:
+        ret.cruiseState.speed = self.v_cruise_pcm_prev if cp.vl["ACC_HUD"]['CRUISE_SPEED'] > 100.0 else cp.vl["ACC_HUD"]['CRUISE_SPEED'] * CV.MPH_TO_MS
+      else:
+        ret.cruiseState.speed = self.v_cruise_pcm_prev if cp.vl["ACC_HUD"]['CRUISE_SPEED'] > 160.0 else cp.vl["ACC_HUD"]['CRUISE_SPEED'] * CV.KPH_TO_MS
       self.v_cruise_pcm_prev = ret.cruiseState.speed
     else:
       ret.cruiseState.speedOffset = calc_cruise_offset(cp.vl["CRUISE_PARAMS"]['CRUISE_SPEED_OFFSET'], ret.vEgo)
