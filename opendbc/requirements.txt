@@ -1,4 +1,4 @@
-Cython==0.29.14
+Cython==0.29.21
 flake8==3.7.9
 Jinja2==2.10.3
 pycapnp==0.6.4
