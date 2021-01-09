@@ -4,8 +4,8 @@ from common.params import Params
 # from openioc.honda import HondaInputOutputController
 from selfdrive.boardd.boardd import can_list_to_can_capnp
 import cereal.messaging as messaging
-from common.basedir import BASEDIR
-from common.hardware import PC
+# from common.basedir import BASEDIR
+from selfdrive.hardware import PC
 # import subprocess
 # import yaml
 import time
@@ -13,6 +13,7 @@ import os
 from selfdrive.body.lib.bodyd_helpers import load_car, allowed, offroad, panda_connected
 # TODO: abstract this
 from selfdrive.car.honda.bodyinterface import BodyInterface
+
 
 class BodyD(object):
   """Class to communicate with the car's body functions. Can only send commands when controlsd is dead."""
