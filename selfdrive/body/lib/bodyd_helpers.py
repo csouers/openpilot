@@ -1,9 +1,11 @@
 import os
 import cereal.messaging as messaging
+from selfdrive.hardware import PC
 
-
-# OP_DIR = '/data/openpilot/selfdrive/car'
-OP_DIR = '/home/pi/openpilot/'
+if not PC:
+  OP_DIR = '/data/openpilot/'
+else:
+  OP_DIR = '/home/pi/openpilot/'
 def load_car(cache):
   """Get lists of supported cars and load the cached car's values."""
   all_makes = []
