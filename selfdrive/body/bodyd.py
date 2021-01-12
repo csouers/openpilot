@@ -25,10 +25,10 @@ class BodyD(object):
     self.read_only = False
 
     self.cache = self.p.get("LiveParameters")
-    # self.cache = 'HONDA ACCORD HATCHBACK 2017 SEDAN/COUPE 2019'
+    self.mock = bool('mock' in (str(self.cache)))
 
     # Wait until the next loop and try again
-    if self.cache is None:
+    if self.cache is None or self.mock:
       return
 
     self.makes, self.make, self.carFingerprint, self.body = load_car(self.cache)
@@ -116,13 +116,11 @@ class BodyD(object):
       if panda or PC:
         if off:
           # slow mode
-          # print('bodyd: tick')
           self.data_sample()
           # pull from socks and update BodyState
           time.sleep(1)
         else:
           # same same, but faster
-          # print('bodyd: boom')
           self.data_sample()
           # fastest frame on b-can is 10hz
           time.sleep(0.1)
@@ -135,9 +133,9 @@ def main():
     while 1:
       b = BodyD()
 
-      # in case we have cleared params
-      if b.cache is None:
-        print("bodyd: Unrecognized car. Start vehicle and wait 15 seconds")
+      # in case we have cleared params or mock car
+      if b.cache is None or b.mock:
+        print("bodyd: Car not recognized. Start vehicle and wait 15 seconds")
         time.sleep(15)
 
       else:
