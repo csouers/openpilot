@@ -9,10 +9,11 @@ Body = body.BodyState
 Door = Body.Door
 Window = Body.Window
 
+
 def get_body_signals(CP):
   # this function generates lists for signal, messages and initial values
   signals = [
-    # signal , frame name
+    # signal , frame name, initial value
     # ajar state
     ('LF_OPEN', 'LEFT_DOORS', 0),
     ('LR_OPEN', 'LEFT_DOORS', 0),
@@ -28,13 +29,12 @@ def get_body_signals(CP):
     ('LF_WINDOWSTATE', 'FRONT_WINDOWS', 0),
     ('RF_WINDOWSTATE', 'FRONT_WINDOWS', 0),
 
-    #testing
-    ('_COUNTER_', 'SPEED1', 0),
   ]
   # check for gateway heartbeat?
   checks = []
 
   return signals, checks
+
 
 class BodyState():
   def __init__(self, BP):
