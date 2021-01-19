@@ -1,7 +1,7 @@
 [submodule "panda"]
 	path = panda
  	url = ../../csouers/panda.git
-  	branch = body_op
+  branch = body_op
 [submodule "opendbc"]
 	path = opendbc
 	url = ../../csouers/opendbc.git
@@ -16,3 +16,7 @@
 [submodule "rednose_repo"]
 	path = rednose_repo
 	url = ../../commaai/rednose.git
+[submodule "panda_bodyharness"]
+	path = panda_bodyharness
+  url = https://github.com/csouers/panda
+  branch = bodyharness
