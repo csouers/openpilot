@@ -4,6 +4,7 @@ from selfdrive.body.lib.bodyd_helpers import dbc_dict
 # supported cars here. Mimic car/make/values.py
 # this might not work out long term as some body messages could change between model years where ADAS doesn't
 class CAR:
+  ACCORD = "HONDA ACCORD 2018 SPORT 2T"
   CIVIC_BOSCH = 'HONDA CIVIC HATCHBACK 2017 SEDAN/COUPE 2019'
 
 # id, time (0), data, bus
@@ -15,5 +16,6 @@ class CAR:
 # }
 
 DBC = {
-  CAR.CIVIC_BOSCH: dbc_dict('honda_civic_hatchback_2017_body'),
+  CAR.ACCORD: dbc_dict('honda_accord_s2t_2018_body_generated'),
+  CAR.CIVIC_BOSCH: dbc_dict('honda_civic_hatchback_2017_body_generated'),
 }
