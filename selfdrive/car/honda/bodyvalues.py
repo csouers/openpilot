@@ -17,5 +17,5 @@ class CAR:
 
 DBC = {
   CAR.ACCORD: dbc_dict('honda_accord_s2t_2018_body_generated'),
-  CAR.CIVIC_BOSCH: dbc_dict('honda_civic_hatchback_2017_body_generated'),
+  CAR.CIVIC_BOSCH: dbc_dict('honda_civic_hatchback_ex_2017_body_generated'),
 }
