@@ -20,7 +20,7 @@ def jpeg_write(fn, dat):
   l_top = "Range: 54 Miles"
   img_editable = ImageDraw.Draw(img)
   # todo: define areas of the image
-  img_editable.text((500, 500), l_top, (230, 230, 230), font=ImageFont.truetype(os.path.join(BASEDIR, "selfdrive/assets/fonts/opensans_regular.ttf"), 200))
+  img_editable.text((500, 500), l_top, (230, 230, 230), font=ImageFont.load_defaults() #truetype(os.path.join(BASEDIR, "selfdrive/assets/fonts/opensans_regular.ttf"), 200))
   img_editable.save(fn, "JPEG")
 
 
