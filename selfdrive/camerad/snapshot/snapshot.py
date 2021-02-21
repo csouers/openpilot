@@ -5,7 +5,7 @@ import subprocess
 import time
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 import cereal.messaging as messaging
 from common.basedir import BASEDIR
