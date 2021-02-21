@@ -13,7 +13,6 @@ from common.params import Params
 from common.transformations.camera import eon_f_frame_size, eon_d_frame_size, leon_d_frame_size, tici_f_frame_size
 from selfdrive.hardware import TICI
 from selfdrive.controls.lib.alertmanager import set_offroad_alert
-from selfdrive.cameard.snapshot.body import bod2jpeg
 
 def jpeg_write(fn, dat):
   img = Image.fromarray(dat)
