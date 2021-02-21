@@ -13,11 +13,16 @@ from common.params import Params
 from common.transformations.camera import eon_f_frame_size, eon_d_frame_size, leon_d_frame_size, tici_f_frame_size
 from selfdrive.hardware import TICI
 from selfdrive.controls.lib.alertmanager import set_offroad_alert
-
+from selfdrive.cameard.snapshot.body import bod2jpeg
 
 def jpeg_write(fn, dat):
   img = Image.fromarray(dat)
-  img.save(fn, "JPEG")
+  # different data for different cams?
+  l_top = "Range: 54 Miles"
+  img_editable = ImageDraw.Draw(img)
+  # todo: define areas of the image
+  img_editable.text((500, 500), l_top, (230, 230, 230), font=ImageFont.truetype(join(BASEDIR, "selfdrive/assets/fonts/opensans_regular.ttf"), 200)
+  img_editable.save(fn, "JPEG")
 
 
 def extract_image(dat, frame_sizes):
@@ -39,6 +44,8 @@ def get_snapshots(frame="frame", front_frame="frontFrame"):
 
   rear = extract_image(sm[frame].image, frame_sizes)
   front = extract_image(sm[front_frame].image, frame_sizes)
+
+
   return rear, front
 
 
