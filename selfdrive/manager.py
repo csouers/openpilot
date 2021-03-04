@@ -177,7 +177,8 @@ managed_processes = {
   "dmonitoringmodeld": ("selfdrive/modeld", ["./dmonitoringmodeld"]),
   "modeld": ("selfdrive/modeld", ["./modeld"]),
   "rtshield": "selfdrive.rtshield",
-  "bodyd": "selfdrive.body.bodyd"}
+  "bodyd": "selfdrive.body.bodyd",
+  }
 
 daemon_processes = {
   "manage_athenad": ("selfdrive.athena.manage_athenad", "AthenadPid"),
