@@ -6,6 +6,7 @@
 // include the dynamic struct
 #include "cereal/gen/cpp/log.capnp.c++"
 #include "cereal/gen/cpp/car.capnp.c++"
+#include "cereal/gen/cpp/body.capnp.c++"
 #include "cereal/gen/cpp/legacy.capnp.c++"
 #include "cereal/services.h"
 
