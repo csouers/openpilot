@@ -477,6 +477,7 @@ rednose/**
 cereal/.gitignore
 cereal/__init__.py
 cereal/car.capnp
+cereal/body.capnp
 cereal/legacy.capnp
 cereal/log.capnp
 cereal/services.py
