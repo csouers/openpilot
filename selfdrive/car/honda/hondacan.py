@@ -83,8 +83,7 @@ def create_steering_control(packer, apply_steer, lkas_active, car_fingerprint, i
   values = {
     "STEER_TORQUE": apply_steer if lkas_active else 0,
     "STEER_TORQUE_REQUEST": lkas_active,
-    }
-
+  }
   bus = get_lkas_cmd_bus(car_fingerprint, radar_disabled)
   return packer.make_can_msg("STEERING_CONTROL", bus, values, idx)
 
@@ -136,13 +135,13 @@ def create_ui_commands(packer, pcm_speed, hud, car_fingerprint, is_metric, idx, 
       }
     commands.append(packer.make_can_msg("ACC_HUD", bus_pt, acc_hud_values, idx))
 
-    lkas_hud_values = {
-    'SET_ME_X41': 0x41,
-    'SET_ME_X48': 0x48,
-    'STEERING_REQUIRED': hud.steer_required,
-    'SOLID_LANES': hud.lanes,
-    'BEEP': 0,
-    }
+  lkas_hud_values = {
+  'SET_ME_X41': 0x41,
+  'SET_ME_X48': 0x48,
+  'STEERING_REQUIRED': hud.steer_required,
+  'SOLID_LANES': hud.lanes,
+  'BEEP': 0,
+  }
 
   if car_fingerprint in HONDA_BOSCH_EXT and not openpilot_longitudinal_control:
     commands.append(packer.make_can_msg('LKAS_HUD_A', bus_lkas, lkas_hud_values, idx))
