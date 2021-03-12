@@ -196,7 +196,7 @@ class CarInterface(CarInterfaceBase):
     elif candidate in (CAR.ACCORD, CAR.ACCORD_V2, CAR.ACCORD_15, CAR.ACCORDH, CAR.ACCORDH_V2):
       stop_and_go = True
       if candidate not in [CAR.ACCORDH, CAR.ACCORDH_V2]:  # Hybrid uses same brake msg as hatch
-        ret.safetyParam = 1  # Accord(ICE), CRV 5G, RDX 3G, and Odyssey Bosch use an alternate user brake msg
+        ret.safetyParam = 1  # Accord(ICE), CRV 5G, and RDX 3G use an alternate user brake msg
       ret.mass = 3279. * CV.LB_TO_KG + STD_CARGO_KG
       ret.wheelbase = 2.83
       ret.centerToFront = ret.wheelbase * 0.39
@@ -243,7 +243,7 @@ class CarInterface(CarInterfaceBase):
 
     elif candidate == CAR.CRV_5G:
       stop_and_go = True
-      ret.safetyParam = 1  # Accord(ICE), CRV 5G, RDX 3G, and Odyssey Bosch use an alternate user brake msg
+      ret.safetyParam = 1  # Accord(ICE), CRV 5G, and RDX 3G use an alternate user brake msg
       ret.mass = 3410. * CV.LB_TO_KG + STD_CARGO_KG
       ret.wheelbase = 2.66
       ret.centerToFront = ret.wheelbase * 0.41
@@ -265,7 +265,7 @@ class CarInterface(CarInterfaceBase):
 
     elif candidate == CAR.CRV_HYBRID:
       stop_and_go = True
-      ret.safetyParam = 1  # Accord(ICE), CRV 5G, RDX 3G, and Odyssey Bosch use an alternate user brake msg
+      ret.safetyParam = 1  # Accord(ICE), CRV 5G, and RDX 3G use an alternate user brake msgy
       ret.mass = 1667. + STD_CARGO_KG  # mean of 4 models in kg
       ret.wheelbase = 2.66
       ret.centerToFront = ret.wheelbase * 0.41
