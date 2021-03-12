@@ -1,5 +1,5 @@
 from selfdrive.config import Conversions as CV
-from selfdrive.car.honda.values import HONDA_BOSCH, HONDA_BOSCH_V2, CAR
+from selfdrive.car.honda.values import HONDA_BOSCH, HONDA_BOSCH_EXT, CAR
 
 # CAN bus layout with relay
 # 0 = ACC-CAN - radar side
@@ -136,7 +136,7 @@ def create_ui_commands(packer, pcm_speed, hud, car_fingerprint, is_metric, idx, 
       }
     commands.append(packer.make_can_msg("ACC_HUD", bus_pt, acc_hud_values, idx))
 
-  if car_fingerprint in HONDA_BOSCH_V2 and not openpilot_longitudinal_control:
+  if car_fingerprint in HONDA_BOSCH_EXT and not openpilot_longitudinal_control:
     lkas_hud_values = {
       'SET_ME_X41': 1 if hud.lanes else 0,  # TODO: rename this later
       'SET_ME_X01': 1,
