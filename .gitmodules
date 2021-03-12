@@ -5,7 +5,7 @@
 [submodule "opendbc"]
 	path = opendbc
 	url = ../../csouers/opendbc.git
-	branch = odyssey
+	branch = accord21
 [submodule "laika_repo"]
 	path = laika_repo
 	url = ../../commaai/laika.git
