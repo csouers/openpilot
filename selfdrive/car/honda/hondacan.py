@@ -85,13 +85,6 @@ def create_steering_control(packer, apply_steer, lkas_active, car_fingerprint, i
     "STEER_TORQUE_REQUEST": lkas_active,
     }
 
-  # if car_fingerprint == CAR.ODYSSEY_BOSCH:
-  #   ext = {
-  #     "DISABLED_HIGH_SPEED": not lkas_active,
-  #     "ENABLED_FEEDBACK": lkas_active,  # this may really be some sort of feedback from the EPS. It has some lag from when STEER_TORQUE_REQUEST goes HI
-  #     }
-  #   values.update(ext)
-
   bus = get_lkas_cmd_bus(car_fingerprint, radar_disabled)
   return packer.make_can_msg("STEERING_CONTROL", bus, values, idx)
 

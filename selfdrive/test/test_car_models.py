@@ -131,10 +131,6 @@ routes = {
     'carFingerprint': HONDA.ODYSSEY_CHN,
     'enableCamera': True,
   },
-  "61df4561384512b8|2020-10-16--18-22-46": {
-    'carFingerprint': HONDA.ODYSSEY_BOSCH,
-    'enableCamera': True,
-  },
   "08a3deb07573f157|2020-03-06--16-11-19": {
     'carFingerprint': HONDA.ACCORD_15,
     'enableCamera': True,

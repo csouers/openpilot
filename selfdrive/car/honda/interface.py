@@ -129,8 +129,6 @@ class CarInterface(CarInterfaceBase):
       ret.enableCamera = True
       ret.radarOffCan = True
       ret.openpilotLongitudinalControl = False
-      # Don't think we can use this because extended frames aren't capture for CAN fingerprint
-      # ret.boschV2 = 0x33DA in fingerprint[2]
     else:
       ret.safetyModel = car.CarParams.SafetyModel.hondaNidec
       ret.enableCamera = True
@@ -360,22 +358,6 @@ class CarInterface(CarInterfaceBase):
       ret.lateralParams.torqueBP, ret.lateralParams.torqueV = [[0, 32767], [0, 32767]]  # TODO: determine if there is a dead zone at the top end
       tire_stiffness_factor = 0.82
       ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.28], [0.08]]
-      ret.longitudinalTuning.kpBP = [0., 5., 35.]
-      ret.longitudinalTuning.kpV = [1.2, 0.8, 0.5]
-      ret.longitudinalTuning.kiBP = [0., 35.]
-      ret.longitudinalTuning.kiV = [0.18, 0.12]
-
-    elif candidate == CAR.ODYSSEY_BOSCH:
-      # TODO: # from ODYSSEY. can we merge this with CAR.ODYSSEY??
-      stop_and_go = True
-      ret.safetyParam = 1  # Accord, CRV 5G, and Odyssey Bosch use an alternate user brake msg
-      ret.mass = 4471. * CV.LB_TO_KG + STD_CARGO_KG
-      ret.wheelbase = 3.00
-      ret.centerToFront = ret.wheelbase * 0.41
-      ret.steerRatio = 14.35  # as spec
-      ret.lateralParams.torqueBP, ret.lateralParams.torqueV = [[0, 4096], [0, 4096]]  # TODO: determine if there is a dead zone at the top end
-      tire_stiffness_factor = 0.82
-      ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.45], [0.135]]
       ret.longitudinalTuning.kpBP = [0., 5., 35.]
       ret.longitudinalTuning.kpV = [1.2, 0.8, 0.5]
       ret.longitudinalTuning.kiBP = [0., 35.]
