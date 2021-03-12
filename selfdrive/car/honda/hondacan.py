@@ -136,32 +136,18 @@ def create_ui_commands(packer, pcm_speed, hud, car_fingerprint, is_metric, idx, 
       }
     commands.append(packer.make_can_msg("ACC_HUD", bus_pt, acc_hud_values, idx))
 
+    lkas_hud_values = {
+    'SET_ME_X41': 0x41,
+    'SET_ME_X48': 0x48,
+    'STEERING_REQUIRED': hud.steer_required,
+    'SOLID_LANES': hud.lanes,
+    'BEEP': 0,
+    }
+
   if car_fingerprint in HONDA_BOSCH_EXT and not openpilot_longitudinal_control:
-    lkas_hud_values = {
-      'SET_ME_X41': 1 if hud.lanes else 0,  # TODO: rename this later
-      'SET_ME_X01': 1,
-      # 'SET_ME_X48': 0x48,
-      'STEERING_REQUIRED': hud.steer_required,
-      'SOLID_LANES': hud.lanes,
-      'BEEP': 0,
-    }
     commands.append(packer.make_can_msg('LKAS_HUD_A', bus_lkas, lkas_hud_values, idx))
-
-    # LKAS_HUD_B is an 8 byte copy of LKAS_HUD_A with additional signals in bytes 5-6
-    # extended = {
-    #   'LANES_RECOGNIZED': 3 if hud.lanes else 0
-    # }
-    # lkas_hud_values.update(extended)
     commands.append(packer.make_can_msg('LKAS_HUD_B', bus_lkas, lkas_hud_values, idx))
-
   else:
-    lkas_hud_values = {
-      'SET_ME_X41': 0x41,
-      'SET_ME_X48': 0x48,
-      'STEERING_REQUIRED': hud.steer_required,
-      'SOLID_LANES': hud.lanes,
-      'BEEP': 0,
-    }
     commands.append(packer.make_can_msg('LKAS_HUD', bus_lkas, lkas_hud_values, idx))
 
   if radar_disabled and car_fingerprint in HONDA_BOSCH:
