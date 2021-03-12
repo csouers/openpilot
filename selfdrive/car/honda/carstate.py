@@ -175,8 +175,6 @@ class CarState(CarStateBase):
     self.v_cruise_pcm_prev = 0
     self.cruise_mode = 0
 
-    self.boschExt = False
-
   def update(self, cp, cp_cam, cp_body):
     ret = car.CarState.new_message()
 
