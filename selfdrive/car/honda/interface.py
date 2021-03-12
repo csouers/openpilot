@@ -193,9 +193,9 @@ class CarInterface(CarInterfaceBase):
       ret.longitudinalTuning.kiBP = [0., 35.]
       ret.longitudinalTuning.kiV = [0.18, 0.12]
 
-    elif candidate in (CAR.ACCORD, CAR.ACCORD_V2, CAR.ACCORD_15, CAR.ACCORDH, CAR.ACCORDH_V2):
+    elif candidate in (CAR.ACCORD, CAR.ACCORD_21, CAR.ACCORD_15, CAR.ACCORDH, CAR.ACCORDH_21):
       stop_and_go = True
-      if candidate not in [CAR.ACCORDH, CAR.ACCORDH_V2]:  # Hybrid uses same brake msg as hatch
+      if candidate not in [CAR.ACCORDH, CAR.ACCORDH_21]:  # Hybrid uses same brake msg as hatch
         ret.safetyParam = 1  # Accord(ICE), CRV 5G, and RDX 3G use an alternate user brake msg
       ret.mass = 3279. * CV.LB_TO_KG + STD_CARGO_KG
       ret.wheelbase = 2.83

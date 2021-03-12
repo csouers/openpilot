@@ -35,10 +35,10 @@ VISUAL_HUD = {
 
 class CAR:
   ACCORD = "HONDA ACCORD 2018 SPORT 2T"
-  ACCORD_V2 = "HONDA ACCORD 2021 TOURING 2T"
+  ACCORD_21 = "HONDA ACCORD 2021 TOURING 2T"
   ACCORD_15 = "HONDA ACCORD 2018 LX 1.5T"
   ACCORDH = "HONDA ACCORD 2018 HYBRID TOURING"
-  ACCORDH_V2 = "HONDA ACCORD 2021 HYBRID"
+  ACCORDH_21 = "HONDA ACCORD 2021 HYBRID"
   CIVIC = "HONDA CIVIC 2016 TOURING"
   CIVIC_BOSCH = "HONDA CIVIC HATCHBACK 2017 SEDAN/COUPE 2019"
   CIVIC_BOSCH_DIESEL = "HONDA CIVIC SEDAN 1.6 DIESEL"
@@ -66,7 +66,7 @@ FINGERPRINTS = {
     148: 8, 228: 5, 304: 8, 330: 8, 344: 8, 380: 8, 399: 7, 419: 8, 420: 8, 427: 3, 432: 7, 441: 5, 446: 3, 450: 8, 464: 8, 477: 8, 479: 8, 495: 8, 545: 6, 662: 4, 773: 7, 777: 8, 780: 8, 804: 8, 806: 8, 808: 8, 829: 5, 862: 8, 884: 8, 891: 8, 927: 8, 929: 8, 1302: 8, 1600: 5, 1601: 8, 1652: 8
   }],
   # # TODO: GET THESE
-  CAR.ACCORD_V2: [{ 0:0,
+  CAR.ACCORD_21: [{ 0:0,
   }],
   CAR.ACCORD_15: [{
     148: 8, 228: 5, 304: 8, 330: 8, 344: 8, 380: 8, 399: 7, 401: 8, 420: 8, 427: 3, 432: 7, 441: 5, 446: 3, 450: 8, 464: 8, 477: 8, 479: 8, 495: 8, 545: 6, 662: 4, 773: 7, 777: 8, 780: 8, 804: 8, 806: 8, 808: 8, 829: 5, 862: 8, 884: 8, 891: 8, 927: 8, 929: 8, 1302: 8, 1600: 5, 1601: 8, 1652: 8
@@ -75,7 +75,7 @@ FINGERPRINTS = {
     148: 8, 228: 5, 304: 8, 330: 8, 344: 8, 380: 8, 387: 8, 388: 8, 399: 7, 419: 8, 420: 8, 427: 3, 432: 7, 441: 5, 450: 8, 464: 8, 477: 8, 479: 8, 495: 8, 525: 8, 545: 6, 662: 4, 773: 7, 777: 8, 780: 8, 804: 8, 806: 8, 808: 8, 829: 5, 862: 8, 884: 8, 891: 8, 927: 8, 929: 8, 1302: 8, 1600: 5, 1601: 8, 1652: 8
   }],
   ## TODO: GET THESE
-  CAR.ACCORDH_V2: [{ 0:0,
+  CAR.ACCORDH_21: [{ 0:0,
   }],
   CAR.ACURA_ILX: [{
     57: 3, 145: 8, 228: 5, 304: 8, 316: 8, 342: 6, 344: 8, 380: 8, 398: 3, 399: 7, 419: 8, 420: 8, 422: 8, 428: 8, 432: 7, 464: 8, 476: 4, 490: 8, 506: 8, 512: 6, 513: 6, 542: 7, 545: 4, 597: 8, 660: 8, 773: 7, 777: 8, 780: 8, 800: 8, 804: 8, 808: 8, 819: 7, 821: 5, 829: 5, 882: 2, 884: 7, 887: 8, 888: 8, 892: 8, 923: 2, 929: 4, 983: 8, 985: 3, 1024: 5, 1027: 5, 1029: 8, 1030: 5, 1034: 5, 1036: 8, 1039: 8, 1057: 5, 1064: 7, 1108: 8, 1365: 5,
@@ -159,7 +159,7 @@ FINGERPRINTS = {
 }
 
 # Don't use theses fingerprints for fingerprinting, they are still needed for ECU detection
-IGNORED_FINGERPRINTS = [CAR.INSIGHT, CAR.CIVIC_BOSCH_DIESEL, CAR.CRV_EU, CAR.HRV, CAR.ACURA_RDX_3G, CAR.ACCORD_V2, CAR.ACCORDH_V2]
+IGNORED_FINGERPRINTS = [CAR.INSIGHT, CAR.CIVIC_BOSCH_DIESEL, CAR.CRV_EU, CAR.HRV, CAR.ACURA_RDX_3G, CAR.ACCORD_21, CAR.ACCORDH_21]
 
 # add DIAG_MSGS to fingerprints
 for c in FINGERPRINTS:
@@ -352,7 +352,7 @@ FW_VERSIONS = {
       b'39990-TVA-A150\x00\x00',
     ],
   },
-  CAR.ACCORD_V2: {
+  CAR.ACCORD_21: {
     (Ecu.programmedFuelInjection, 0x18da10f1, None): [
       b'37805-6B2-C520\x00\x00',
     ],
@@ -393,7 +393,7 @@ FW_VERSIONS = {
       b'39390-TVA-A120\x00\x00',
     ],
   },
-  CAR.ACCORDH_V2: {
+  CAR.ACCORDH_21: {
     (Ecu.gateway, 0x18daeff1, None): [
       b'38897-TWD-J020\x00\x00',
     ],
@@ -1157,10 +1157,10 @@ FW_VERSIONS = {
 
 DBC = {
   CAR.ACCORD: dbc_dict('honda_accord_s2t_2018_can_generated', None),
-  CAR.ACCORD_V2: dbc_dict('honda_accord_s2t_2021_can_generated', None),
+  CAR.ACCORD_21: dbc_dict('honda_accord_s2t_2021_can_generated', None),
   CAR.ACCORD_15: dbc_dict('honda_accord_lx15t_2018_can_generated', None),
   CAR.ACCORDH: dbc_dict('honda_accord_s2t_2018_can_generated', None),
-  CAR.ACCORDH_V2: dbc_dict('honda_accord_s2t_2021_can_generated', None),
+  CAR.ACCORDH_21: dbc_dict('honda_accord_s2t_2021_can_generated', None),
   CAR.ACURA_ILX: dbc_dict('acura_ilx_2016_can_generated', 'acura_ilx_2016_nidec'),
   CAR.ACURA_RDX: dbc_dict('acura_rdx_2018_can_generated', 'acura_ilx_2016_nidec'),
   CAR.ACURA_RDX_3G: dbc_dict('acura_rdx_2020_can_generated', None),
@@ -1183,10 +1183,10 @@ DBC = {
 
 STEER_THRESHOLD = {
   CAR.ACCORD: 1200,
-  CAR.ACCORD_V2: 1200,
+  CAR.ACCORD_21: 1200,
   CAR.ACCORD_15: 1200,
   CAR.ACCORDH: 1200,
-  CAR.ACCORDH_V2: 1200,
+  CAR.ACCORDH_21: 1200,
   CAR.ACURA_ILX: 1200,
   CAR.ACURA_RDX: 400,
   CAR.ACURA_RDX_3G: 1200,
@@ -1209,10 +1209,10 @@ STEER_THRESHOLD = {
 
 SPEED_FACTOR = {
   CAR.ACCORD: 1.,
-  CAR.ACCORD_V2: 1.,
+  CAR.ACCORD_21: 1.,
   CAR.ACCORD_15: 1.,
   CAR.ACCORDH: 1.,
-  CAR.ACCORDH_V2: 1.,
+  CAR.ACCORDH_21: 1.,
   CAR.ACURA_ILX: 1.,
   CAR.ACURA_RDX: 1.,
   CAR.ACURA_RDX_3G: 1.,
@@ -1233,5 +1233,5 @@ SPEED_FACTOR = {
   CAR.INSIGHT: 1.,
 }
 
-HONDA_BOSCH = set([CAR.ACCORD, CAR.ACCORD_V2, CAR.ACCORD_15, CAR.ACCORDH, CAR.ACCORDH_V2, CAR.CIVIC_BOSCH, CAR.CIVIC_BOSCH_DIESEL, CAR.CRV_5G, CAR.CRV_HYBRID, CAR.INSIGHT, CAR.ACURA_RDX_3G])
-HONDA_BOSCH_EXT = set([CAR.ACCORD_V2, CAR.ACCORDH_V2])
+HONDA_BOSCH = set([CAR.ACCORD, CAR.ACCORD_21, CAR.ACCORD_15, CAR.ACCORDH, CAR.ACCORDH_21, CAR.CIVIC_BOSCH, CAR.CIVIC_BOSCH_DIESEL, CAR.CRV_5G, CAR.CRV_HYBRID, CAR.INSIGHT, CAR.ACURA_RDX_3G])
+HONDA_BOSCH_EXT = set([CAR.ACCORD_21, CAR.ACCORDH_21])
