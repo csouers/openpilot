@@ -368,7 +368,7 @@ class CarState(CarStateBase):
     signals = []
     checks = []
 
-    if CP.carFingerprint in [CAR.ACCORD, CAR.CIVIC_BOSCH_DIESEL, CAR.CRV_5G]:
+    if CP.carFingerprint in [CAR.ACCORD, CAR.CIVIC_BOSCH_DIESEL, CAR.CRV_5G, CAR.CRV_HYBRID]:
       signals += [("BSM_ALERT", "BSM_STATUS_RIGHT", 0),
                   ("BSM_ALERT", "BSM_STATUS_LEFT", 0)]
 
