@@ -1,11 +1,14 @@
 import os
-import cereal.messaging as messaging
+# import cereal.messaging as messaging
 from selfdrive.hardware import PC
+from common.params import Params
 
 if not PC:
   OP_DIR = '/data/openpilot/'
 else:
   OP_DIR = '/home/pi/openpilot/'
+
+
 def load_car(cache):
   """Get lists of supported cars and load the cached car's values."""
   all_makes = []
@@ -27,10 +30,7 @@ def load_car(cache):
       _path = ('selfdrive.car.%s' % make_lower)
 
   # load body
-  try:
-    bs = __import__(_path + '.bodystate', fromlist=['BodyState']).BodyState
-  except ModuleNotFoundError:
-    bs = None
+  bs = __import__(_path + '.bodystate', fromlist=['BodyState']).BodyState
 
   # get our car
   CAR = __import__('selfdrive.car.%s.bodyvalues' % make_lower, fromlist=['CAR']).CAR
@@ -41,19 +41,22 @@ def load_car(cache):
             car = model
   return all_makes, make, car, bs
 
-def offroad(p):
+
+def is_offroad(p):
   offroad = True if p.get("IsOffroad") == b"1" else False
   return offroad
 
-def panda_connected(p):
+
+def is_panda_connected(p):
   panda = True if p.get("PandaDongleId") is not None else False
   return panda
 
+
 def allowed():
   """Check if we're offroad and have a connected panda."""
-  params = Params()
-  offroad = True if params.get("IsOffroad") == b"1" else False
-  panda = True if params.get("PandaDongleId") is not None else False
+  p = Params()
+  offroad = is_offroad(p)
+  panda = is_panda_connected(p)
 
   if offroad and panda:
     return True

@@ -1,8 +1,9 @@
 from selfdrive.body.lib.bodyd_helpers import dbc_dict
 
 
-# supported cars here. Mimic car/make/values.py. Must have verified signals against a test route.
-# this might not work out long term as some body messages could change between model years where ADAS doesn't
+# Supported cars here. Must have verified signals against a test route.
+# See > https://github.com/csouers/bodyharness/wiki/Data-Collection#window-lock-and-door-capture---instructions
+
 class CAR:
   ACCORD = "HONDA ACCORD 2018 SPORT 2T"
   CIVIC_BOSCH = 'HONDA CIVIC HATCHBACK 2017 SEDAN/COUPE 2019'

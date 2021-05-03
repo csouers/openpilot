@@ -78,6 +78,10 @@ selfdrive/athena/__init__.py
 selfdrive/athena/athenad.py
 selfdrive/athena/manage_athenad.py
 
+selfdrive/body/lib/bodyd_helpers.py
+selfdrive/body/test/test_bodyd.py
+selfdrive/body/bodyd.py
+
 selfdrive/boardd/.gitignore
 selfdrive/boardd/SConscript
 selfdrive/boardd/__init__.py

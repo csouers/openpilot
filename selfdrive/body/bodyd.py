@@ -2,7 +2,7 @@
 from common.params import Params
 # from time import sleep
 # from openioc.honda import HondaInputOutputController
-from selfdrive.boardd.boardd import can_list_to_can_capnp
+# from selfdrive.boardd.boardd import can_list_to_can_capnp
 import cereal.messaging as messaging
 # from common.basedir import BASEDIR
 from selfdrive.hardware import PC
@@ -10,21 +10,28 @@ from selfdrive.hardware import PC
 # import yaml
 import time
 import os
-from selfdrive.body.lib.bodyd_helpers import load_car, allowed, offroad, panda_connected
+from selfdrive.body.lib.bodyd_helpers import load_car, is_offroad, is_panda_connected
 # TODO: abstract this
 from selfdrive.car.honda.bodyinterface import BodyInterface
 
 
-class BodyD(object):
+class BodyD:
   """Class to communicate with the car's body functions. Can only send commands when controlsd is dead."""
 
-  def __init__(self):
+  def __init__(self, cache=None):
     super(BodyD, self).__init__()
     self.p = Params()
-    self.cache = None
     self.read_only = False
 
-    self.cache = self.p.get("CarParamsCache")
+    # we can init the object with no cache, cache passed in above, or by the FINGERPRINT env
+    if cache is None:
+      fixed_fingerprint = os.environ.get('FINGERPRINT', "")
+      if not fixed_fingerprint:
+        self.cache = self.p.get("CarParamsCache")
+      else:
+        self.cache = fixed_fingerprint
+    else:
+      self.cache = cache
     self.mock = bool('mock' in (str(self.cache)))
 
     # Wait until the next loop and try again
@@ -55,39 +62,39 @@ class BodyD(object):
 
     return
 
-  def DEPRECATED_send(self, command):
-    """Send, if we can. If so, set d and pass that to the send function."""
-    if self.read_only:
-      return "Denied. Read-Only"
-    else:
-      @staticmethod
-      def _send_msg(msg):
-        # TODO: move this to a published events list and check the car for the desired response
-        """Send the actual frame to the car."""
-        sendcan = messaging.pub_sock('sendcan')
-        time.sleep(2)
-        sendcan.send(can_list_to_can_capnp([msg], msgtype='sendcan'))
-        return "Success"
-
-      # TODO: handle a sleeping bus (track the bus state and do the wakeup)
-        if allowed():
-          if 'HONDA' in self.carFingerprint:
-            if command == "unlock":
-              d = [0x0ef81218, 0, b"\x02\x00", self.bus]
-              return self._send_msg(d)
-            elif command == "lock":
-              d = [0x0ef81218, 0, b"\x01\x00", self.bus]
-              return self._send_msg(d)
-            else:
-              return "Unrecognized command"
-          else:
-            return "Unsupported car"
-        else:
-          return "Not permitted. Vehicle is running"
-        # read from can
-        # last_can =
-        # timeout = 250.0  # ms
-        return
+  # def DEPRECATED_send(self, command):
+  #   """Send, if we can. If so, set d and pass that to the send function."""
+  #   if self.read_only:
+  #     return "Denied. Read-Only"
+  #   else:
+  #     @staticmethod
+  #     def _send_msg(msg):
+  #       # TODO: move this to a published events list and check the car for the desired response
+  #       """Send the actual frame to the car."""
+  #       sendcan = messaging.pub_sock('sendcan')
+  #       time.sleep(2)
+  #       sendcan.send(can_list_to_can_capnp([msg], msgtype='sendcan'))
+  #       return "Success"
+  #
+  #     # TODO: handle a sleeping bus (track the bus state and do the wakeup)
+  #       if allowed():
+  #         if 'HONDA' in self.carFingerprint:
+  #           if command == "unlock":
+  #             d = [0x0ef81218, 0, b"\x02\x00", self.bus]
+  #             return self._send_msg(d)
+  #           elif command == "lock":
+  #             d = [0x0ef81218, 0, b"\x01\x00", self.bus]
+  #             return self._send_msg(d)
+  #           else:
+  #             return "Unrecognized command"
+  #         else:
+  #           return "Unsupported car"
+  #       else:
+  #         return "Not permitted. Vehicle is running"
+  #       # read from can
+  #       # last_can =
+  #       # timeout = 250.0  # ms
+  #       return
 
   def data_sample(self):
     """Receive data from sockets and update bodyState"""
@@ -110,20 +117,15 @@ class BodyD(object):
   def bodyd_thread(self):
     while 1:
       # TODO: use Ratekeeper
-      off = offroad(self.p)
-      panda = panda_connected(self.p)
+      off = is_offroad(self.p)
+      panda = is_panda_connected(self.p)
 
       if panda or PC:
-        if off:
-          # slow mode
-          self.data_sample()
-          # pull from socks and update BodyState
-          time.sleep(1)
-        else:
-          # same same, but faster
-          self.data_sample()
-          # fastest frame on b-can is 10hz
-          time.sleep(0.1)
+        # send at 1hz if offroad. fastest frame on b-can is 10hz
+        time.sleep(1) if off else time.sleep(0.1)
+
+        # pull from socks and publish
+        self.data_sample()
       else:
         print('bodyd: Board not connected. Waiting')
         time.sleep(5)

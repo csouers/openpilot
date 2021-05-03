@@ -1,5 +1,5 @@
 from cereal import body
-from opendbc.can.can_define import CANDefine
+# from opendbc.can.can_define import CANDefine
 from opendbc.can.parser import CANParser
 from selfdrive.car.honda.bodyvalues import CAR, DBC
 import cereal.messaging as messaging
