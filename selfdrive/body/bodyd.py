@@ -24,7 +24,7 @@ class BodyD(object):
     self.cache = None
     self.read_only = False
 
-    self.cache = self.p.get("LiveParameters")
+    self.cache = self.p.get("CarParamsCache")
     self.mock = bool('mock' in (str(self.cache)))
 
     # Wait until the next loop and try again
