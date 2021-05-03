@@ -28,9 +28,11 @@ def get_body_signals(CP):
     # windows
     ('LF_WINDOWSTATE', 'FRONT_WINDOWS', 0),
     ('RF_WINDOWSTATE', 'FRONT_WINDOWS', 0),
-    ('SUNROOF_CLOSED', 'FRONT_WINDOWS', 0),
-
   ]
+
+  if CP.carFingerprint in [CAR.ACCORD]:
+    signals += [('SUNROOF_CLOSED', 'FRONT_WINDOWS', 0)]
+
   # check for gateway heartbeat?
   checks = []
 
@@ -65,9 +67,14 @@ class BodyState():
     # windows
     ret.bodyState.frontLeftWindow = Window.closed if bool((cp.vl["FRONT_WINDOWS"]["LF_WINDOWSTATE"])) else Window.open
     ret.bodyState.frontRightWindow = Window.closed if bool((cp.vl["FRONT_WINDOWS"]["RF_WINDOWSTATE"])) else Window.open
+
+    # not yet seen on CAN
     # ret.bodyState.backLeftWindow = Window.closed if bool((cp.vl["FRONT_WINDOWS"]["LF_WINDOWSTATE"])) else Window.open
     # ret.bodyState.backRightWindow = Window.closed if bool((cp.vl["FRONT_WINDOWS"]["LF_WINDOWSTATE"])) else Window.open
-    ret.bodyState.sunroof = Window.closed if bool((cp.vl["FRONT_WINDOWS"]["SUNROOF_CLOSED"])) else Window.open
+
+    # Accord reports sunroof state on CAN
+    if self.CP.carFingerprint in [CAR.ACCORD]:
+      ret.bodyState.sunroof = Window.closed if bool((cp.vl["FRONT_WINDOWS"]["SUNROOF_CLOSED"])) else Window.open
 
     return ret
 
