@@ -61,7 +61,6 @@ class BodyState():
     ret.bodyState.frontRightDoor.lock = Door.Lock.unlocked if bool((cp.vl["RF_DOOR"]['UNLOCKED'])) else Door.Lock.locked
     ret.bodyState.rearLeftDoor.lock = Door.Lock.unlocked if bool((cp.vl["LR_DOOR"]['UNLOCKED'])) else Door.Lock.locked
     ret.bodyState.rearRightDoor.lock = Door.Lock.unlocked if bool((cp.vl["RR_DOOR"]['UNLOCKED'])) else Door.Lock.locked
-    # ret.bodyState.trunk # TODO: is this even a thing?
 
     # windows
     ret.bodyState.frontLeftWindow = Window.closed if bool((cp.vl["FRONT_WINDOWS"]["LF_WINDOWSTATE"])) else Window.open
