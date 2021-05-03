@@ -4,6 +4,7 @@ class BodyInterface():
   def __init__(self, BP):
     self.BS = BodyState(BP)
     self.cp_bodyd_body = self.BS.get_bodyd_body_can_parser(BP)
+    self.carFingerprint = BP.carFingerprint
 
 
   def update(self, can_strings):

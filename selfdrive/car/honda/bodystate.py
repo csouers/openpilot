@@ -73,7 +73,7 @@ class BodyState():
     # ret.bodyState.backRightWindow = Window.closed if bool((cp.vl["FRONT_WINDOWS"]["LF_WINDOWSTATE"])) else Window.open
 
     # Accord reports sunroof state on CAN
-    if self.CP.carFingerprint in [CAR.ACCORD]:
+    if self.BP.carFingerprint in [CAR.ACCORD]:
       ret.bodyState.sunroof = Window.closed if bool((cp.vl["FRONT_WINDOWS"]["SUNROOF_CLOSED"])) else Window.open
 
     return ret
