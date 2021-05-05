@@ -130,6 +130,7 @@ pipeline {
                       ["build", "SCONS_CACHE=1 scons -j4"],
                       ["test athena", "nosetests -s selfdrive/athena/tests/test_athenad_old.py"],
                       ["test manager", "python selfdrive/manager/test/test_manager.py"],
+                      ["test bodyd", "python selfdrive/body/test/test_bodyd.py"],
                       ["onroad tests", "cd selfdrive/test/ && ./test_onroad.py"],
                       ["build devel", "cd release && CI_PUSH=${env.CI_PUSH} ./build_devel.sh"],
                       ["test car interfaces", "cd selfdrive/car/tests/ && ./test_car_interfaces.py"],
