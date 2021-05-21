@@ -4,9 +4,11 @@ from selfdrive.car.honda.bodyvalues import CAR
 # test that we can init with every supported car
 
 
-SUPPORTED_HONDA = [CAR.ACCORD,
-                  CAR.CIVIC_BOSCH,
-                  CAR.CIVIC_BOSCH_DIESEL]
+SUPPORTED_HONDA = [ CAR.ACCORD,
+                    CAR.ACCORD_15,
+                    CAR.CIVIC_BOSCH,
+                    CAR.CIVIC_BOSCH_DIESEL,
+                  ]
 
 
 def main():

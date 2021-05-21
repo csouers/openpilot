@@ -325,7 +325,7 @@ class CarState(CarStateBase):
       self.stock_hud = cp_cam.vl["ACC_HUD"]
       self.stock_brake = cp_cam.vl["BRAKE_COMMAND"]
 
-    if self.CP.carFingerprint in [CAR.ACCORD, CAR.CIVIC_BOSCH_DIESEL, CAR.CRV_5G, CAR.CRV_HYBRID]:
+    if self.CP.carFingerprint in [CAR.ACCORD, CAR.ACCORD_15, CAR.CIVIC_BOSCH_DIESEL, CAR.CRV_5G, CAR.CRV_HYBRID]:
       # BSM messages are on B-CAN, requires a panda forwarding B-CAN messages to CAN 0
       # more info here: https://github.com/commaai/openpilot/pull/1867
       ret.leftBlindspot = cp_body.vl["BSM_STATUS_LEFT"]['BSM_ALERT'] == 1
@@ -368,7 +368,7 @@ class CarState(CarStateBase):
     signals = []
     checks = []
 
-    if CP.carFingerprint in [CAR.ACCORD, CAR.CIVIC_BOSCH_DIESEL, CAR.CRV_5G, CAR.CRV_HYBRID]:
+    if CP.carFingerprint in [CAR.ACCORD, CAR.ACCORD_15, CAR.CIVIC_BOSCH_DIESEL, CAR.CRV_5G, CAR.CRV_HYBRID]:
       signals += [("BSM_ALERT", "BSM_STATUS_RIGHT", 0),
                   ("BSM_ALERT", "BSM_STATUS_LEFT", 0)]
 
