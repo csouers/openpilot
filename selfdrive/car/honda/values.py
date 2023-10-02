@@ -33,8 +33,18 @@ class CarControllerParams:
   BOSCH_ACCEL_MIN = -3.5  # m/s^2
   BOSCH_ACCEL_MAX = 2.0  # m/s^2
 
-  BOSCH_GAS_LOOKUP_BP = [-0.2, 2.0]  # 2m/s^2
-  BOSCH_GAS_LOOKUP_V = [0, 1600]
+  BOSCH_GAS_MIN = -4 # same as panda safety
+  BOSCH_GAS_MAX = 160 # panda safety is 200
+
+  # Stats from 250+ hrs of CIVIC_BOSCH
+  # Max gas: 186.6
+  # Min gas: -4.0
+
+  # Values from PolyReg model of accel, speed, pitch, and engine torque. 100hrs of data. Speed 15 m/s. Pitch -0.01 degrees.
+  # Torque is slightly underrated/lazy so PID is maybe less likely to overshoot which could trigger friction brake (annoying).
+  # BOSCH_GAS_LOOKUP_BP = [-0.3, -0.25, 0.0, 1.0, 2.0, 3.0]
+  BOSCH_GAS_LOOKUP_BP = [-0.25,        -0.1, 0.0, 1.0, 2.0,           3.0]
+  BOSCH_GAS_LOOKUP_V =  [BOSCH_GAS_MIN,   0,  10,  41,  88, BOSCH_GAS_MAX]
 
   def __init__(self, CP):
     self.STEER_MAX = CP.lateralParams.torqueBP[-1]
@@ -50,6 +60,7 @@ class HondaFlags(IntFlag):
   # Bosch models with alternate set of LKAS_HUD messages
   BOSCH_EXT_HUD = 1
   BOSCH_ALT_BRAKE = 2
+  ENABLE_BLINKERS = 4
 
   # Static flags
   BOSCH = 4
@@ -132,7 +143,7 @@ class CAR(Platforms):
       HondaCarDocs("Honda Civic Hatchback 2017-21", min_steer_speed=12. * CV.MPH_TO_MS),
     ],
     CarSpecs(mass=1326, wheelbase=2.7, steerRatio=15.38, centerToFrontRatio=0.4),  # steerRatio: 10.93 is end-to-end spec
-    dbc_dict('honda_civic_hatchback_ex_2017_can_generated', None),
+    dbc_dict('honda_civic_hatchback_ex_2017_can_generated', 'tesla_radar_bosch_generated', body_dbc='honda_body_2017'),
   )
   HONDA_CIVIC_BOSCH_DIESEL = HondaBoschPlatformConfig(
     [],  # don't show in docs

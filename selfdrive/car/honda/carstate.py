@@ -52,11 +52,14 @@ def get_can_messages(CP, gearbox_msg):
 
   if CP.carFingerprint in HONDA_BOSCH:
     # these messages are on camera bus on radarless cars
-    if not CP.openpilotLongitudinalControl and CP.carFingerprint not in HONDA_BOSCH_RADARLESS:
-      messages += [
-        ("ACC_HUD", 10),
-        ("ACC_CONTROL", 50),
-      ]
+    if not CP.openpilotLongitudinalControl:
+      if CP.carFingerprint not in HONDA_BOSCH_RADARLESS:
+        messages += [
+          ("ACC_HUD", 10),
+          ("ACC_CONTROL", 50),
+        ]
+    else:
+          messages.append(("GAS_PEDAL_2", 0))
   else:  # Nidec signals
     if CP.carFingerprint == CAR.HONDA_ODYSSEY_CHN:
       messages.append(("CRUISE_PARAMS", 10))
@@ -93,8 +96,11 @@ class CarState(CarStateBase):
       self.main_on_sig_msg = "SCM_BUTTONS"
 
     self.shifter_values = can_define.dv[self.gearbox_msg]["GEAR_SHIFTER"]
+    if CP.carFingerprint in HONDA_BOSCH:
+      self.kwp_values = {v: k for k, v in can_define.dv["BCM_16f1f0_KWP_Resp_Tester"]["D0"].items()}
     self.steer_status_values = defaultdict(lambda: "UNKNOWN", can_define.dv["STEER_STATUS"]["STEER_STATUS"])
 
+    self.brake_error = False
     self.brake_switch_prev = False
     self.brake_switch_active = False
     self.cruise_setting = 0
@@ -209,6 +215,9 @@ class CarState(CarStateBase):
         # On set, cruise set speed pulses between 254~255 and the set speed prev is set to avoid this.
         ret.cruiseState.speed = self.v_cruise_pcm_prev if acc_hud["CRUISE_SPEED"] > 160.0 else acc_hud["CRUISE_SPEED"] * conversion
         self.v_cruise_pcm_prev = ret.cruiseState.speed
+      else:
+        # TODO: FIX DBC FACTOR
+        self.engine_torque = cp.vl["GAS_PEDAL_2"]["ENGINE_TORQUE_ESTIMATE"] * 0.01
     else:
       ret.cruiseState.speed = cp.vl["CRUISE"]["CRUISE_SPEED_PCM"] * CV.KPH_TO_MS
 
@@ -258,6 +267,22 @@ class CarState(CarStateBase):
       ret.leftBlindspot = cp_body.vl["BSM_STATUS_LEFT"]["BSM_ALERT"] == 1
       ret.rightBlindspot = cp_body.vl["BSM_STATUS_RIGHT"]["BSM_ALERT"] == 1
 
+    if self.CP.flags & HondaFlags.ENABLE_BLINKERS:
+      # Lamp state
+      self.leftBlinker_lamp = cp_body.vl["BCM_12f810_Lighting"]["LEFTSIGNAL"]
+      self.rightBlinker_lamp = cp_body.vl["BCM_12f810_Lighting"]["RIGHTSIGNAL"]
+      # Unfiltered stalk state
+      self.leftBlinker_stalk = cp.vl["SCM_FEEDBACK"]["LEFT_BLINKER"]
+      self.rightBlinker_stalk = cp.vl["SCM_FEEDBACK"]["RIGHT_BLINKER"]
+      # BCM KWP reply
+      # reset
+      self.bcm_kwp_started = False
+      self.bcm_kwp_stopped = False
+      self.bcm_kwp_failed = False
+      # get
+      self.bcm_kwp_started = cp_body.vl["BCM_16f1f0_KWP_Resp_Tester"]["D0"] == self.kwp_values.get("START_ACCEPTED")
+      self.bcm_kwp_stopped = cp_body.vl["BCM_16f1f0_KWP_Resp_Tester"]["D0"] == self.kwp_values.get("STOP_ACCEPTED")
+      self.bcm_kwp_failed = cp_body.vl["BCM_16f1f0_KWP_Resp_Tester"]["D0"] == self.kwp_values.get("UNSUPPORTED")
     return ret
 
   def get_can_parser(self, CP):
@@ -287,11 +312,17 @@ class CarState(CarStateBase):
 
   @staticmethod
   def get_body_can_parser(CP):
+    messages = []
     if CP.enableBsm:
-      messages = [
+      messages += [
         ("BSM_STATUS_LEFT", 3),
         ("BSM_STATUS_RIGHT", 3),
       ]
+    if CP.flags & HondaFlags.ENABLE_BLINKERS:
+      messages += [("BCM_12f810_Lighting", 4),
+                ("BCM_16f1f0_KWP_Resp_Tester", 0)]
+    if len(messages):
       bus_body = CanBus(CP).radar # B-CAN is forwarded to ACC-CAN radar side (CAN 0 on fake ethernet port)
       return CANParser(DBC[CP.carFingerprint]["body"], messages, bus_body)
-    return None
+    else:
+      return None

@@ -30,6 +30,7 @@ from openpilot.selfdrive.controls.lib.longcontrol import LongControl
 from openpilot.selfdrive.controls.lib.vehicle_model import VehicleModel
 
 from openpilot.system.hardware import HARDWARE
+from openpilot.system import sentry
 
 SOFT_DISABLE_TIME = 3  # seconds
 LDW_MIN_SPEED = 31 * CV.MPH_TO_MS
@@ -39,7 +40,7 @@ CAMERA_OFFSET = 0.04
 REPLAY = "REPLAY" in os.environ
 SIMULATION = "SIMULATION" in os.environ
 TESTING_CLOSET = "TESTING_CLOSET" in os.environ
-IGNORE_PROCESSES = {"loggerd", "encoderd", "statsd"}
+IGNORE_PROCESSES = {"encoderd", "statsd"}
 
 ThermalStatus = log.DeviceState.ThermalStatus
 State = log.ControlsState.OpenpilotState
@@ -97,8 +98,8 @@ class Controls:
     self.sm = messaging.SubMaster(['deviceState', 'pandaStates', 'peripheralState', 'modelV2', 'liveCalibration',
                                    'carOutput', 'driverMonitoringState', 'longitudinalPlan', 'liveLocationKalman',
                                    'managerState', 'liveParameters', 'radarState', 'liveTorqueParameters',
-                                   'testJoystick'] + self.camera_packets + self.sensor_packets,
-                                  ignore_alive=ignore, ignore_avg_freq=ignore+['radarState', 'testJoystick'], ignore_valid=['testJoystick', ],
+                                   'testJoystick', 'navInstruction'] + self.camera_packets + self.sensor_packets,
+                                  ignore_alive=ignore, ignore_avg_freq=ignore+['radarState', 'testJoystick'], ignore_valid=['testJoystick', 'navInstruction'],
                                   frequency=int(1/DT_CTRL))
 
     self.joystick_mode = self.params.get_bool("JoystickDebugMode")
@@ -159,16 +160,35 @@ class Controls:
 
     self.startup_event = get_startup_event(car_recognized, not self.CP.passive, len(self.CP.carFw) > 0)
 
+    # Send car port data to @csouers. I only care about the car. NO PII or location data. I don't want it.
+    _sentry = sentry.init(sentry.SentryProject.AF)
+    sentry_out = ""
     if not sounds_available:
       self.events.add(EventName.soundsUnavailable, static=True)
     if not car_recognized:
       self.events.add(EventName.carUnrecognized, static=True)
       if len(self.CP.carFw) > 0:
         set_offroad_alert("Offroad_CarUnrecognized", True)
+        sentry.set_tag('carFw', 'unrecognized')
+        sentry_out = "new FP"
       else:
         set_offroad_alert("Offroad_NoFirmware", True)
+        sentry.set_tag('carFw', 'empty')
+        sentry_out = "empty FP"
     elif self.CP.passive:
       self.events.add(EventName.dashcamMode, static=True)
+    elif self.CP.fuzzyFingerprint:
+      sentry.set_tag('carFw', 'fuzzy')
+      sentry_out = f'fuzzy FP: {self.CP.carFingerprint}'
+    else:
+      sentry.set_tag('carFw', 'confirmed')
+      sentry_out = f'good FP: {self.CP.carFingerprint}'
+    if _sentry:
+      try:
+        sentry.set_tag('vin', self.CP.carVin)
+        sentry.capture_message(f'{sentry_out}', self.CP, 'carParams')
+      except Exception:
+        print('sentry failed')
 
     # controlsd is driven by carState, expected at 100Hz
     self.rk = Ratekeeper(100, print_delay_threshold=None)
@@ -538,6 +558,7 @@ class Controls:
 
     long_plan = self.sm['longitudinalPlan']
     model_v2 = self.sm['modelV2']
+    navIn = self.sm['navInstruction']
 
     CC = car.CarControl.new_message()
     CC.enabled = self.enabled
@@ -551,10 +572,16 @@ class Controls:
     actuators = CC.actuators
     actuators.longControlState = self.LoC.long_control_state
 
+    # Model blinker idea
+    blink = False #CC.enabled and navIn.maneuverType == "turn" and \
+                  #      0.1 <= navIn.maneuverDistance <= (CS.vEgo * 10)
+    CC.leftBlinker = blink and navIn.maneuverModifier == "left"
+    CC.rightBlinker = blink and navIn.maneuverModifier == "right"
+
     # Enable blinkers while lane changing
     if model_v2.meta.laneChangeState != LaneChangeState.off:
-      CC.leftBlinker = model_v2.meta.laneChangeDirection == LaneChangeDirection.left
-      CC.rightBlinker = model_v2.meta.laneChangeDirection == LaneChangeDirection.right
+      CC.leftBlinker |= model_v2.meta.laneChangeDirection == LaneChangeDirection.left
+      CC.rightBlinker |= model_v2.meta.laneChangeDirection == LaneChangeDirection.right
 
     if CS.leftBlinker or CS.rightBlinker:
       self.last_blinker_frame = self.sm.frame
@@ -646,7 +673,9 @@ class Controls:
       if any(not be.pressed and be.type == ButtonType.gapAdjustCruise for be in CS.buttonEvents):
         self.personality = (self.personality - 1) % 3
         self.params.put_nonblocking('LongitudinalPersonality', str(self.personality))
-
+      elif any(not be.pressed and be.type == ButtonType.altButton1 for be in CS.buttonEvents):
+        self.experimental_mode = not self.experimental_mode
+        self.params.put_bool_nonblocking("ExperimentalMode", self.experimental_mode)
     return CC, lac_log
 
   def publish_logs(self, CS, start_time, CC, lac_log):
@@ -676,6 +705,7 @@ class Controls:
     hudControl.lanesVisible = self.enabled
     hudControl.leadVisible = self.sm['longitudinalPlan'].hasLead
     hudControl.leadDistanceBars = self.personality + 1
+    hudControl.e2e = self.experimental_mode
 
     hudControl.rightLaneVisible = True
     hudControl.leftLaneVisible = True

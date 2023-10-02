@@ -70,43 +70,53 @@ def create_brake_command(packer, CAN, apply_brake, pump_on, pcm_override, pcm_ca
   return packer.make_can_msg("BRAKE_COMMAND", CAN.pt, values)
 
 
-def create_acc_commands(packer, CAN, enabled, active, accel, gas, stopping_counter, car_fingerprint):
+def create_acc_commands(packer, CAN, enabled, active, accel, gas, vego, stopping_counter, braking_counter, car_fingerprint, test):
   commands = []
   min_gas_accel = CarControllerParams.BOSCH_GAS_LOOKUP_BP[0]
+  engine_brake_accel = CarControllerParams.BOSCH_GAS_LOOKUP_BP[1]
+  stopped = stopping_counter > 4 * 50 # allow idle stop after 4 seconds (50 Hz)
 
-  control_on = 5 if enabled else 0
-  gas_command = gas if active and accel > min_gas_accel else -30000
+  accel = accel if not stopped else CarControllerParams.BOSCH_ACCEL_MIN
+  gas_command = gas if active and accel > min_gas_accel else -3000
   accel_command = accel if active else 0
-  braking = 1 if active and accel < min_gas_accel else 0
-  standstill = 1 if active and stopping_counter > 0 else 0
-  standstill_release = 1 if active and stopping_counter == 0 else 0
+  braking = active and braking_counter > 0 and accel < 0
+  standstill = active and stopped
+  standstill_release = active and accel > 0 and vego < 0.5 # Hold high briefly
 
   # common ACC_CONTROL values
   acc_control_values = {
     'ACCEL_COMMAND': accel_command,
-    'STANDSTILL': standstill,
+    'STANDSTILL': standstill, #stopping_counter > 5 * 50, # needs safety when combined with BRAKE_REQUEST
   }
 
   if car_fingerprint in HONDA_BOSCH_RADARLESS:
     acc_control_values.update({
       "CONTROL_ON": enabled,
-      "IDLESTOP_ALLOW": stopping_counter > 200,  # allow idle stop after 4 seconds (50 Hz)
+      "IDLESTOP_ALLOW": standstill,
     })
   else:
     acc_control_values.update({
       # setting CONTROL_ON causes car to set POWERTRAIN_DATA->ACC_STATUS = 1
-      "CONTROL_ON": control_on,
+      "CONTROL_ON": 5 if enabled else 0,
       "GAS_COMMAND": gas_command,  # used for gas
       "BRAKE_LIGHTS": braking,
-      "BRAKE_REQUEST": braking,
+      "BRAKE_REQUEST": braking, # needs safety. holds brake pressure when high
       "STANDSTILL_RELEASE": standstill_release,
     })
     acc_control_on_values = {
-      "SET_TO_3": 0x03,
+      "SET_TO_3": 0x3, #test  % (0xff >> 1), # has no effect from user perspective
       "CONTROL_ON": enabled,
-      "SET_TO_FF": 0xff,
-      "SET_TO_75": 0x75,
-      "SET_TO_30": 0x30,
+      "SET_TO_FF": 0xff, #test  % 0xff, # has no effect from user perspective
+      "SET_TO_75": 0x75, #test  % 0xff, # has no effect from user perspective
+      "SET_TO_30": 0x30, #test  % 0xff, # has no effect from user perspective
+      # "ZEROS_BOH": test  % (0xff >> 3), # rescale and add other new one
+      # "ZEROS_BOH2": test % 0xffff,
+      # "ZEROS_BOH3": test % 2,
+      "COAST_BRAKE": active and accel < -0.15 ,
+      "ACCEL_KILL": 0, # ALWAYS ZERO! KILLS GAS PEDAL TOO! TAKES EFFECT AFTER ENABLING/MOVING FORWARD THE FIRST TIME
+      # "POS_ACCEL": active and not braking,
+      # "NEW_SIGNAL_1": test % 0x4,
+
     }
     commands.append(packer.make_can_msg("ACC_CONTROL_ON", CAN.pt, acc_control_on_values))
 
@@ -118,6 +128,10 @@ def create_steering_control(packer, CAN, apply_steer, lkas_active, car_fingerpri
   values = {
     "STEER_TORQUE": apply_steer if lkas_active else 0,
     "STEER_TORQUE_REQUEST": lkas_active,
+    # "RDM": lkas_active,
+    # "STEER_DOWN_TO_ZERO": lkas_active,
+    # "SET_ME_X00": 0xff >> 1, # kills steering
+    # "SET_ME_X00_2": 0xff,
   }
   bus = get_lkas_cmd_bus(CAN, car_fingerprint, radar_disabled)
   return packer.make_can_msg("STEERING_CONTROL", bus, values)
@@ -134,14 +148,14 @@ def create_bosch_supplemental_1(packer, CAN, car_fingerprint):
   return packer.make_can_msg("BOSCH_SUPPLEMENTAL_1", bus, values)
 
 
-def create_ui_commands(packer, CAN, CP, enabled, pcm_speed, hud, is_metric, acc_hud, lkas_hud):
+def create_ui_commands(packer, CAN, CP, enabled, pcm_speed, hud, is_metric, acc_hud, lkas_hud, braking, test):
   commands = []
   radar_disabled = CP.carFingerprint in (HONDA_BOSCH - HONDA_BOSCH_RADARLESS) and CP.openpilotLongitudinalControl
   bus_lkas = get_lkas_cmd_bus(CAN, CP.carFingerprint, radar_disabled)
 
   if CP.openpilotLongitudinalControl:
     acc_hud_values = {
-      'CRUISE_SPEED': hud.v_cruise,
+      'CRUISE_SPEED': hud.v_cruise if not braking else 252,
       'ENABLE_MINI_CAR': 1 if enabled else 0,
       # only moves the lead car without ACC_ON
       'HUD_DISTANCE': (hud.lead_distance_bars + 1) % 4,  # wraps to 0 at 4 bars
@@ -154,6 +168,8 @@ def create_ui_commands(packer, CAN, CP, enabled, pcm_speed, hud, is_metric, acc_
       acc_hud_values['ACC_ON'] = int(enabled)
       acc_hud_values['FCM_OFF'] = 1
       acc_hud_values['FCM_OFF_2'] = 1
+      acc_hud_values['ICONS'] = int(bool(hud.e2e) << 1)
+      #acc_hud_values['CRUISE_CONTROL_LABEL'] = not hud.e2e
     else:
       # Shows the distance bars, TODO: stock camera shows updates temporarily while disabled
       acc_hud_values['ACC_ON'] = int(enabled)
@@ -171,6 +187,8 @@ def create_ui_commands(packer, CAN, CP, enabled, pcm_speed, hud, is_metric, acc_
     'STEERING_REQUIRED': hud.steer_required,
     'SOLID_LANES': hud.lanes_visible,
     'BEEP': 0,
+    'RDM_OFF_MINI_ICON': hud.e2e,
+    'LANE_DEPARTURE_WARNING': hud.ldw,
   }
 
   if CP.carFingerprint in HONDA_BOSCH_RADARLESS:
@@ -196,7 +214,10 @@ def create_ui_commands(packer, CAN, CP, enabled, pcm_speed, hud, is_metric, acc_
     commands.append(packer.make_can_msg('RADAR_HUD', CAN.pt, radar_hud_values))
 
     if CP.carFingerprint == CAR.HONDA_CIVIC_BOSCH:
-      commands.append(packer.make_can_msg("LEGACY_BRAKE_COMMAND", CAN.pt, {}))
+      legacy_brake_values = {
+        'AEB_BRAKE_ALERT': hud.fcw,
+      }
+      commands.append(packer.make_can_msg("LEGACY_BRAKE_COMMAND", CAN.pt, legacy_brake_values))
 
   return commands
 
@@ -209,3 +230,18 @@ def spam_buttons_command(packer, CAN, button_val, car_fingerprint):
   # send buttons to camera on radarless cars
   bus = CAN.camera if car_fingerprint in HONDA_BOSCH_RADARLESS else CAN.pt
   return packer.make_can_msg("SCM_BUTTONS", bus, values)
+
+def create_kwp_can_msg(packer, cmd, bus=0):
+  if cmd == 'left':
+    values = {'D0': 0x30,
+              'D1': 0x0a,
+              'D2': 0x0f,
+             }
+  elif cmd == 'right':
+    values = {'D0': 0x30,
+              'D1': 0x0b,
+              'D2': 0x0f,
+             }
+  else:
+    return [384899312, 0, b' ', bus] # default is a special 1 byte cancel
+  return packer.make_can_msg("Tester_16f118_KWP_Req_BCM", bus, values)

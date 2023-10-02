@@ -1,9 +1,11 @@
 [submodule "panda"]
   path = panda
-  url = ../../commaai/panda.git
+  url = ../../csouers/panda.git
+  branch = body_op_c3
 [submodule "opendbc"]
   path = opendbc
-  url = ../../commaai/opendbc.git
+  url = ../../csouers/opendbc.git
+  branch = body_c3
 [submodule "cereal"]
   path = cereal
   url = ../../commaai/cereal.git

@@ -763,13 +763,26 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   # is thrown. This can mean a service crashed, did not broadcast a message for
   # ten times the regular interval, or the average interval is more than 10% too high.
   EventName.commIssue: {
-    ET.SOFT_DISABLE: soft_disable_alert("Communication Issue Between Processes"),
-    ET.NO_ENTRY: comm_issue_alert,
-  },
+    ET.WARNING: Alert(
+    "Take Control",
+    "Communication Issue Between Processes",
+    AlertStatus.userPrompt, AlertSize.mid,
+    Priority.HIGH, VisualAlert.steerRequired, AudibleAlert.none, 2.),
+    },
+
+    #ET.SOFT_DISABLE: soft_disable_alert("Communication Issue Between Processes"),
+    #ET.NO_ENTRY: comm_issue_alert,
+
   EventName.commIssueAvgFreq: {
-    ET.SOFT_DISABLE: soft_disable_alert("Low Communication Rate Between Processes"),
-    ET.NO_ENTRY: NoEntryAlert("Low Communication Rate Between Processes"),
+     ET.WARNING: Alert(
+     "Take Control",
+     "Low Communication Rate Between Processes",
+     AlertStatus.userPrompt, AlertSize.mid,
+     Priority.HIGH, VisualAlert.steerRequired, AudibleAlert.none, 2.),
   },
+
+    #ET.SOFT_DISABLE: soft_disable_alert("Low Communication Rate Between Processes"),
+    #ET.NO_ENTRY: NoEntryAlert("Low Communication Rate Between Processes"),
 
   EventName.controlsdLagging: {
     ET.SOFT_DISABLE: soft_disable_alert("Controls Lagging"),
@@ -780,6 +793,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   EventName.processNotRunning: {
     ET.NO_ENTRY: process_not_running_alert,
     ET.SOFT_DISABLE: soft_disable_alert("Process Not Running"),
+    ET.PERMANENT: process_not_running_alert,
   },
 
   EventName.radarFault: {
