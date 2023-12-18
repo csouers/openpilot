@@ -205,6 +205,8 @@ class CarState(CarStateBase):
 
     if self.CP.carFingerprint in HONDA_BOSCH:
       if not self.CP.openpilotLongitudinalControl:
+        # Radarless: passthrough for what we don't modify
+        self.scm_buttons = cp.vl["SCM_BUTTONS"] if self.CP.carFingerprint in HONDA_BOSCH_RADARLESS else {}
         # ACC_HUD is on camera bus on radarless cars
         acc_hud = cp_cam.vl["ACC_HUD"] if self.CP.carFingerprint in HONDA_BOSCH_RADARLESS else cp.vl["ACC_HUD"]
         ret.cruiseState.nonAdaptive = acc_hud["CRUISE_CONTROL_LABEL"] != 0
