@@ -83,6 +83,8 @@ class CarState(CarStateBase):
                         cp.vl["BodyInfo"]["DOOR_OPEN_FR"],
                         cp.vl["BodyInfo"]["DOOR_OPEN_FL"]])
     ret.steerFaultPermanent = cp.vl["Steering_Torque"]["Steer_Error_1"] == 1
+    # Didn't see this on CAN
+    ret.steerActive = self.out.cruiseState.enabled
 
     cp_es_distance = cp_body if self.car_fingerprint in (GLOBAL_GEN2 | HYBRID_CARS) else cp_cam
     if self.car_fingerprint in PREGLOBAL_CARS:

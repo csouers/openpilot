@@ -27,6 +27,7 @@ class CarState(CarStateBase):
     ret.gearShifter = car.CarState.GearShifter.drive
     ret.cruiseState.enabled = True
     ret.cruiseState.available = True
+    ret.steerActive = True
 
     return ret
 

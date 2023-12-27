@@ -233,13 +233,18 @@ def startup_master_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubM
 def below_engage_speed_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int) -> Alert:
   return NoEntryAlert(f"Drive above {get_display_speed(CP.minEnableSpeed, metric)} to engage")
 
-
 def below_steer_speed_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int) -> Alert:
+  silent = True if CS.vEgo < (5 * CV.MPH_TO_MS) else False
+  audible_alert = AudibleAlert.none if silent else AudibleAlert.prompt
+  visual_alert = VisualAlert.none if silent else VisualAlert.steerRequired
+  msg_end = f". Drive above {get_display_speed(CP.minSteerEnableSpeed, metric)}"
+  if CS.steerActive:
+      msg_end = f" Below {get_display_speed(CP.minSteerDisableSpeed, metric)}"
   return Alert(
-    f"Steer Unavailable Below {get_display_speed(CP.minSteerSpeed, metric)}",
+    f"Steering Unavailable{msg_end}",
     "",
     AlertStatus.userPrompt, AlertSize.small,
-    Priority.LOW, VisualAlert.steerRequired, AudibleAlert.prompt, 0.4)
+    Priority.LOW, visual_alert, audible_alert, 0.4)
 
 
 def calibration_incomplete_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int) -> Alert:

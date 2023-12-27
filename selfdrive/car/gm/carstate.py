@@ -84,6 +84,8 @@ class CarState(CarStateBase):
 
     # 0 inactive, 1 active, 2 temporarily limited, 3 failed
     self.lkas_status = pt_cp.vl["PSCMStatus"]["LKATorqueDeliveredStatus"]
+    # Triggered by LKASteeringCmdActive on ASCMLKASteeringCmd
+    ret.steerActive = self.lkas_status == 1
     ret.steerFaultTemporary = self.lkas_status == 2
     ret.steerFaultPermanent = self.lkas_status == 3
 

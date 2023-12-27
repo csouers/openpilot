@@ -15,6 +15,7 @@ from openpilot.common.realtime import DT_CTRL
 from openpilot.selfdrive.car import apply_hysteresis, gen_empty_fingerprint, scale_rot_inertia, scale_tire_stiffness, STD_CARGO_KG
 from openpilot.selfdrive.controls.lib.drive_helpers import V_CRUISE_MAX, get_friction
 from openpilot.selfdrive.controls.lib.events import Events
+from openpilot.selfdrive.controls.lib.latcontrol import MIN_LATERAL_CONTROL_SPEED
 from openpilot.selfdrive.controls.lib.vehicle_model import VehicleModel
 
 ButtonType = car.CarState.ButtonEvent.Type
@@ -26,6 +27,7 @@ MAX_CTRL_SPEED = (V_CRUISE_MAX + 4) * CV.KPH_TO_MS
 ACCEL_MAX = 2.0
 ACCEL_MIN = -3.5
 FRICTION_THRESHOLD = 0.3
+LOW_STEER_ALERT_MIN_SPEED = 12.1 * CV.MPH_TO_MS # ???????
 
 TORQUE_PARAMS_PATH = os.path.join(BASEDIR, 'selfdrive/car/torque_data/params.toml')
 TORQUE_OVERRIDE_PATH = os.path.join(BASEDIR, 'selfdrive/car/torque_data/override.toml')
@@ -65,7 +67,7 @@ class CarInterfaceBase(ABC):
 
     self.frame = 0
     self.steering_unpressed = 0
-    self.low_speed_alert = False
+    self.steer_mismatch_counter = 0
     self.no_steer_warning = False
     self.silent_steer_warning = True
     self.v_ego_cluster_seen = False
@@ -110,6 +112,11 @@ class CarInterfaceBase(ABC):
     ret.rotationalInertia = scale_rot_inertia(ret.mass, ret.wheelbase)
     ret.tireStiffnessFront, ret.tireStiffnessRear = scale_tire_stiffness(ret.mass, ret.wheelbase, ret.centerToFront, ret.tireStiffnessFactor)
 
+    # The speed where steering control starts. In rare cases, these are not the same.
+    ret.minSteerEnableSpeed = max(ret.minSteerEnableSpeed, ret.minSteerDisableSpeed)
+    if ret.notCar:
+      ret.minSteerEnableSpeed = ret.minSteerDisableSpeed
+
     return ret
 
   @staticmethod
@@ -153,7 +160,7 @@ class CarInterfaceBase(ABC):
     # standard ALC params
     ret.tireStiffnessFactor = 1.0
     ret.steerControlType = car.CarParams.SteerControlType.torque
-    ret.minSteerSpeed = 0.
+    ret.minSteerDisableSpeed = 0.  # the speed where steering control stops
     ret.wheelSpeedFactor = 1.0
 
     ret.pcmCruise = True     # openpilot's state is tied to the PCM's cruise state on most cars
@@ -204,6 +211,13 @@ class CarInterfaceBase(ABC):
 
     # get CarState
     ret = self._update(c)
+
+    # Alert if an un-faulted EPS is unexpectedly unresponsive above the minSteerSpeeds. Could be due to EPS FW or a gateway.
+    if c.latActive and not ret.steerActive and c.actuators.steer != 0 and \
+        ret.vEgo > max(self.CP.minSteerEnableSpeed, MIN_LATERAL_CONTROL_SPEED):
+      self.steer_mismatch_counter + 1
+    else:
+      self.steer_mismatch_counter = 0
 
     ret.canValid = all(cp.can_valid for cp in self.can_parsers if cp is not None)
     ret.canTimeout = any(cp.bus_timeout for cp in self.can_parsers if cp is not None)
@@ -276,9 +290,17 @@ class CarInterfaceBase(ABC):
       if b.type == ButtonType.cancel:
         events.add(EventName.buttonCancel)
 
-    # Handle permanent and temporary steering faults
+    # Low speed steer alert logic. Warn the user when driving near the drop out speed and the EPS is active
+    low_speed_alert = False
+    if (not cs_out.steerActive and cs_out.vEgo < self.CP.minSteerEnableSpeed >= LOW_STEER_ALERT_MIN_SPEED) or \
+           (cs_out.steerActive and (self.CP.minSteerDisableSpeed + 1.5) >= cs_out.vEgo >= LOW_STEER_ALERT_MIN_SPEED):
+      low_speed_alert = True
+    if low_speed_alert:
+      events.add(EventName.belowSteerSpeed)
+
+    # Handle permanent/temporary steering faults and blocked steering commands
     self.steering_unpressed = 0 if cs_out.steeringPressed else self.steering_unpressed + 1
-    if cs_out.steerFaultTemporary:
+    if cs_out.steerFaultTemporary or (self.steer_mismatch_counter > int(1. / DT_CTRL) and not low_speed_alert):
       if cs_out.steeringPressed and (not self.CS.out.steerFaultTemporary or self.no_steer_warning):
         self.no_steer_warning = True
       else:

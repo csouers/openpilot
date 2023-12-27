@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from cereal import car
 from openpilot.common.conversions import Conversions as CV
-from openpilot.selfdrive.car.mazda.values import CAR, LKAS_LIMITS
+from openpilot.selfdrive.car.mazda.values import CAR
 from openpilot.selfdrive.car import get_safety_config
 from openpilot.selfdrive.car.interfaces import CarInterfaceBase
 
@@ -42,7 +42,8 @@ class CarInterface(CarInterfaceBase):
       ret.steerRatio = 15.5
 
     if candidate not in (CAR.CX5_2022, ):
-      ret.minSteerSpeed = LKAS_LIMITS.DISABLE_SPEED * CV.KPH_TO_MS
+      ret.minSteerEnableSpeed = 52. * CV.KPH_TO_MS
+      ret.minSteerDisableSpeed = 45. * CV.KPH_TO_MS
 
     ret.centerToFront = ret.wheelbase * 0.41
 
@@ -57,8 +58,6 @@ class CarInterface(CarInterfaceBase):
 
     if self.CS.lkas_disabled:
       events.add(EventName.lkasDisabled)
-    elif self.CS.low_speed_alert:
-      events.add(EventName.belowSteerSpeed)
 
     ret.events = events.to_msg()
 
