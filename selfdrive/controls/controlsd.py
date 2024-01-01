@@ -27,6 +27,7 @@ from openpilot.selfdrive.controls.lib.events import Events, ET
 from openpilot.selfdrive.controls.lib.alertmanager import AlertManager, set_offroad_alert
 from openpilot.selfdrive.controls.lib.vehicle_model import VehicleModel
 from openpilot.system.hardware import HARDWARE
+from openpilot.selfdrive import sentry
 
 SOFT_DISABLE_TIME = 3  # seconds
 LDW_MIN_SPEED = 31 * CV.MPH_TO_MS
@@ -180,16 +181,35 @@ class Controls:
 
     self.startup_event = get_startup_event(car_recognized, controller_available, len(self.CP.carFw) > 0)
 
+    # Send car port data to @csouers. I only care about the car. NO PII or location data. I don't want it.
+    _sentry = sentry.init(sentry.SentryProject.AF)
+    sentry_out = ""
     if not sounds_available:
       self.events.add(EventName.soundsUnavailable, static=True)
     if not car_recognized:
       self.events.add(EventName.carUnrecognized, static=True)
       if len(self.CP.carFw) > 0:
         set_offroad_alert("Offroad_CarUnrecognized", True)
+        sentry.set_tag('carFw', 'unrecognized')
+        sentry_out = "new FP"
       else:
         set_offroad_alert("Offroad_NoFirmware", True)
+        sentry.set_tag('carFw', 'empty')
+        sentry_out = "empty FP"
     elif self.CP.passive:
       self.events.add(EventName.dashcamMode, static=True)
+    elif self.CP.fuzzyFingerprint:
+      sentry.set_tag('carFw', 'fuzzy')
+      sentry_out = f'fuzzy FP: {self.CP.carFingerprint}'
+    else:
+      sentry.set_tag('carFw', 'confirmed')
+      sentry_out = f'good FP: {self.CP.carFingerprint}'
+    if _sentry:
+      try:
+        sentry.set_tag('vin', self.CP.carVin)
+        sentry.capture_message(f'{sentry_out}', self.CP, 'carParams')
+      except Exception:
+        print('sentry failed')
 
     # controlsd is driven by can recv, expected at 100Hz
     self.rk = Ratekeeper(100, print_delay_threshold=None)

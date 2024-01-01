@@ -8,15 +8,35 @@ from openpilot.selfdrive.athena.registration import is_registered_device
 from openpilot.system.hardware import HARDWARE, PC
 from openpilot.common.swaglog import cloudlog
 from openpilot.system.version import get_branch, get_commit, get_origin, get_version, \
-                              is_comma_remote, is_dirty, is_tested_branch
+                              is_dirty, is_tested_branch
 
 
 class SentryProject(Enum):
+  # All sentry data goes to AF. comma doesn't want fork data anyway
   # python project
-  SELFDRIVE = "https://6f3c7076c1e14b2aa10f5dde6dda0cc4@o33823.ingest.sentry.io/77924"
+  SELFDRIVE = "https://741d934bafba6e550d348f17c32dc1dc@o1269754.ingest.sentry.io/4506477324533760"
   # native project
-  SELFDRIVE_NATIVE = "https://3e4b586ed21a4479ad5d85083b639bc6@o33823.ingest.sentry.io/157615"
+  SELFDRIVE_NATIVE = "https://e2e617f1ccebd58ed7aa8fbb15ed5b95@o1269754.ingest.sentry.io/4506477325582336"
+  # controlsd CP
+  AF = "https://21654306f32a4cc29d283e7e068cf27c@o1269754.ingest.sentry.io/6460006"
 
+def capture_message(msg: str, data: str, file: str) -> None:
+  try:
+    dongle = Params().get("DongleId", encoding='utf-8')
+    # Encode bytes to base64 for attachment
+    attachment = str(data).encode()
+    # Add attachment to the current scope
+    # with sentry_sdk.start_transaction() as transaction:
+    with sentry_sdk.configure_scope() as scope:
+      scope.add_attachment(
+          bytes=attachment,
+          filename=f'{dongle}_{file}.txt',
+          content_type="text/plain"
+      )
+    sentry_sdk.capture_message(f'{dongle}: {msg}')
+    sentry_sdk.flush()  # https://github.com/getsentry/sentry-python/issues/291
+  except Exception as e:
+    print(e)
 
 def report_tombstone(fn: str, message: str, contents: str) -> None:
   cloudlog.error({'tombstone': message})
@@ -44,8 +64,9 @@ def set_tag(key: str, value: str) -> None:
 
 def init(project: SentryProject) -> bool:
   # forks like to mess with this, so double check
-  comma_remote = is_comma_remote() and "commaai" in get_origin()
-  if not comma_remote or not is_registered_device() or PC:
+  af_remote = "csouers" in get_origin(default="")
+  if not af_remote or not is_registered_device() or PC:
+    print('sentry: device or remote not allowed')
     return False
 
   env = "release" if is_tested_branch() else "master"
