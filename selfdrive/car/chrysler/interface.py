@@ -24,7 +24,7 @@ class CarInterface(CarInterfaceBase):
     elif candidate in RAM_DT:
       ret.safetyConfigs[0].safetyParam |= Panda.FLAG_CHRYSLER_RAM_DT
 
-    ret.minSteerSpeed = 3.8  # m/s
+    ret.minSteerDisableSpeed = 3.8 # m/s
     CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning)
     if candidate not in RAM_CARS:
       # Newer FW versions standard on the following platforms, or flashed by a dealer onto older platforms have a higher minimum steering speed.
@@ -62,26 +62,29 @@ class CarInterface(CarInterfaceBase):
       ret.wheelbase = 3.88
       ret.steerRatio = 16.3
       ret.mass = 2493.
-      ret.minSteerSpeed = 14.5
+      ret.minSteerDisableSpeed = 14.5
       # Older EPS FW allow steer to zero
       if any(fw.ecu == 'eps' and b"68" < fw.fwVersion[:4] <= b"6831" for fw in car_fw):
-        ret.minSteerSpeed = 0.
+        ret.minSteerDisableSpeed = 0.
 
     elif candidate == CAR.RAM_HD:
       ret.steerActuatorDelay = 0.2
       ret.wheelbase = 3.785
       ret.steerRatio = 15.61
       ret.mass = 3405.
-      ret.minSteerSpeed = 16
+      ret.minSteerDisableSpeed = 16.
       CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning, 1.0, False)
 
     else:
       raise ValueError(f"Unsupported car: {candidate}")
 
+    # TODO: simplify? its only really used here
+    # if steering engages at a speed greater than where it disengages
     if ret.flags & ChryslerFlags.HIGHER_MIN_STEERING_SPEED:
-      # TODO: allow these cars to steer down to 13 m/s if already engaged.
       # TODO: Durango 2020 may be able to steer to zero once above 38 kph
-      ret.minSteerSpeed = 17.5  # m/s 17 on the way up, 13 on the way down once engaged.
+      ret.minSteerEnableSpeed = 17.5 # m/s
+      ret.minSteerDisableSpeed = 13.5 # m/s. speed per comment from
+      # https://github.com/commaai/openpilot/blame/5aff2b68851e3a65a98bcd075945793c14f6e7c5/selfdrive/car/chrysler/carcontroller.py#L46
 
     ret.centerToFront = ret.wheelbase * 0.44
     ret.enableBsm = 720 in fingerprint[0]
@@ -93,14 +96,6 @@ class CarInterface(CarInterfaceBase):
 
     # events
     events = self.create_common_events(ret, extra_gears=[car.CarState.GearShifter.low])
-
-    # Low speed steer alert hysteresis logic
-    if self.CP.minSteerSpeed > 0. and ret.vEgo < (self.CP.minSteerSpeed + 0.5):
-      self.low_speed_alert = True
-    elif ret.vEgo > (self.CP.minSteerSpeed + 1.):
-      self.low_speed_alert = False
-    if self.low_speed_alert:
-      events.add(car.CarEvent.EventName.belowSteerSpeed)
 
     ret.events = events.to_msg()
 

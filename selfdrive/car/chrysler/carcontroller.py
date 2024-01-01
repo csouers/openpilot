@@ -2,7 +2,7 @@ from opendbc.can.packer import CANPacker
 from openpilot.common.realtime import DT_CTRL
 from openpilot.selfdrive.car import apply_meas_steer_torque_limits
 from openpilot.selfdrive.car.chrysler import chryslercan
-from openpilot.selfdrive.car.chrysler.values import RAM_CARS, CarControllerParams, ChryslerFlags
+from openpilot.selfdrive.car.chrysler.values import RAM_CARS, CarControllerParams
 
 
 class CarController:
@@ -48,16 +48,13 @@ class CarController:
     # steering
     if self.frame % self.params.STEER_STEP == 0:
 
-      # TODO: can we make this more sane? why is it different for all the cars?
+      # TODO: Untested/unconfirmed but makes sense to me. The removed (minSteerSpeed -3.0) for setting the control bit false
+      #       seems like it was a hack to make the variable minSteerSpeed cars work (like Pacifica 2020)
       lkas_control_bit = self.lkas_control_bit_prev
-      if CS.out.vEgo > self.CP.minSteerSpeed:
+      if CS.out.vEgo > self.CP.minSteerEnableSpeed:
         lkas_control_bit = True
-      elif self.CP.flags & ChryslerFlags.HIGHER_MIN_STEERING_SPEED:
-        if CS.out.vEgo < (self.CP.minSteerSpeed - 3.0):
-          lkas_control_bit = False
-      elif self.CP.carFingerprint in RAM_CARS:
-        if CS.out.vEgo < (self.CP.minSteerSpeed - 0.5):
-          lkas_control_bit = False
+      elif CS.out.vEgo < (self.CP.minSteerDisableSpeed - 0.5):
+        lkas_control_bit = False
 
       # EPS faults if LKAS re-enables too quickly
       lkas_control_bit = lkas_control_bit and (self.frame - self.last_lkas_falling_edge > 200)

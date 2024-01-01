@@ -105,7 +105,7 @@ class CarInterface(CarInterfaceBase):
       ret.wheelbase = 2.7
       ret.steerRatio = 15.4            # 14 is Stock | Settled Params Learner values are steerRatio: 15.401566348670535
       ret.tireStiffnessFactor = 0.385    # stiffnessFactor settled on 1.0081302973865127
-      ret.minSteerSpeed = 32 * CV.MPH_TO_MS
+      ret.minSteerDisableSpeed = 32 * CV.MPH_TO_MS
     elif candidate == CAR.ELANTRA_2021:
       ret.mass = 2800. * CV.LB_TO_KG
       ret.wheelbase = 2.72
@@ -120,7 +120,7 @@ class CarInterface(CarInterfaceBase):
       ret.mass = 2060.
       ret.wheelbase = 3.01
       ret.steerRatio = 16.5
-      ret.minSteerSpeed = 60 * CV.KPH_TO_MS
+      ret.minSteerDisableSpeed = 60 * CV.KPH_TO_MS
     elif candidate in (CAR.KONA, CAR.KONA_EV, CAR.KONA_HEV, CAR.KONA_EV_2022, CAR.KONA_EV_2ND_GEN):
       ret.mass = {CAR.KONA_EV: 1685., CAR.KONA_HEV: 1425., CAR.KONA_EV_2022: 1743., CAR.KONA_EV_2ND_GEN: 1740.}.get(candidate, 1275.)
       ret.wheelbase = {CAR.KONA_EV_2ND_GEN: 2.66, }.get(candidate, 2.6)
@@ -132,7 +132,7 @@ class CarInterface(CarInterfaceBase):
       ret.steerRatio = 13.73  # Spec
       ret.tireStiffnessFactor = 0.385
       if candidate in (CAR.IONIQ, CAR.IONIQ_EV_LTD, CAR.IONIQ_PHEV_2019):
-        ret.minSteerSpeed = 32 * CV.MPH_TO_MS
+        ret.minSteerDisableSpeed = 32 * CV.MPH_TO_MS
     elif candidate in (CAR.IONIQ_5, CAR.IONIQ_6):
       ret.mass = 1948
       ret.wheelbase = 2.97
@@ -178,7 +178,7 @@ class CarInterface(CarInterfaceBase):
       ret.steerRatio = 13.6  # average of all the cars
       ret.tireStiffnessFactor = 0.385
       if candidate == CAR.KIA_NIRO_PHEV:
-        ret.minSteerSpeed = 32 * CV.MPH_TO_MS
+        ret.minSteerDisableSpeed = 32 * CV.MPH_TO_MS
     elif candidate == CAR.KIA_SELTOS:
       ret.mass = 1337.
       ret.wheelbase = 2.63
@@ -193,7 +193,7 @@ class CarInterface(CarInterfaceBase):
       ret.steerRatio = 13.75
       ret.tireStiffnessFactor = 0.5
       if candidate == CAR.KIA_OPTIMA_G4:
-        ret.minSteerSpeed = 32 * CV.MPH_TO_MS
+        ret.minSteerDisableSpeed = 32 * CV.MPH_TO_MS
     elif candidate in (CAR.KIA_STINGER, CAR.KIA_STINGER_2022):
       ret.mass = 1825.
       ret.wheelbase = 2.78
@@ -354,14 +354,6 @@ class CarInterface(CarInterfaceBase):
     # Main button also can trigger an engagement on these cars
     allow_enable = any(btn in ENABLE_BUTTONS for btn in self.CS.cruise_buttons) or any(self.CS.main_buttons)
     events = self.create_common_events(ret, pcm_enable=self.CS.CP.pcmCruise, allow_enable=allow_enable)
-
-    # low speed steer alert hysteresis logic (only for cars with steer cut off above 10 m/s)
-    if ret.vEgo < (self.CP.minSteerSpeed + 2.) and self.CP.minSteerSpeed > 10.:
-      self.low_speed_alert = True
-    if ret.vEgo > (self.CP.minSteerSpeed + 4.):
-      self.low_speed_alert = False
-    if self.low_speed_alert:
-      events.add(car.CarEvent.EventName.belowSteerSpeed)
 
     ret.events = events.to_msg()
 

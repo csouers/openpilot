@@ -118,41 +118,42 @@ class HondaCarInfo(CarInfo):
 
 CAR_INFO: Dict[str, Optional[Union[HondaCarInfo, List[HondaCarInfo]]]] = {
   CAR.ACCORD: [
-    HondaCarInfo("Honda Accord 2018-22", "All", video_link="https://www.youtube.com/watch?v=mrUwlj3Mi58", min_steer_speed=3. * CV.MPH_TO_MS),
-    HondaCarInfo("Honda Inspire 2018", "All", min_steer_speed=3. * CV.MPH_TO_MS),
+    HondaCarInfo("Honda Accord 2018-22", "All", video_link="https://www.youtube.com/watch?v=mrUwlj3Mi58"),
+    HondaCarInfo("Honda Inspire 2018", "All"),
   ],
-  CAR.ACCORDH: HondaCarInfo("Honda Accord Hybrid 2018-22", "All", min_steer_speed=3. * CV.MPH_TO_MS),
-  CAR.CIVIC: HondaCarInfo("Honda Civic 2016-18", min_steer_speed=12. * CV.MPH_TO_MS, video_link="https://youtu.be/-IkImTe1NYE"),
+  CAR.ACCORDH: HondaCarInfo("Honda Accord Hybrid 2018-22", "All"),
+  CAR.CIVIC: HondaCarInfo("Honda Civic 2016-18", video_link="https://youtu.be/-IkImTe1NYE",
+                          min_steer_speed=[12. * CV.MPH_TO_MS]),
   CAR.CIVIC_BOSCH: [
     HondaCarInfo("Honda Civic 2019-21", "All", video_link="https://www.youtube.com/watch?v=4Iz1Mz5LGF8",
-                 footnotes=[Footnote.CIVIC_DIESEL], min_steer_speed=2. * CV.MPH_TO_MS),
-    HondaCarInfo("Honda Civic Hatchback 2017-21", min_steer_speed=12. * CV.MPH_TO_MS),
+                footnotes=[Footnote.CIVIC_DIESEL]),
+    HondaCarInfo("Honda Civic Hatchback 2017-18", min_steer_speed=[12. * CV.MPH_TO_MS]),
   ],
   CAR.CIVIC_BOSCH_DIESEL: None,  # same platform
   CAR.CIVIC_2022: [
     HondaCarInfo("Honda Civic 2022-23", "All", video_link="https://youtu.be/ytiOT5lcp6Q"),
     HondaCarInfo("Honda Civic Hatchback 2022-23", "All", video_link="https://youtu.be/ytiOT5lcp6Q"),
   ],
-  CAR.ACURA_ILX: HondaCarInfo("Acura ILX 2016-19", "AcuraWatch Plus", min_steer_speed=25. * CV.MPH_TO_MS),
-  CAR.CRV: HondaCarInfo("Honda CR-V 2015-16", "Touring Trim", min_steer_speed=12. * CV.MPH_TO_MS),
-  CAR.CRV_5G: HondaCarInfo("Honda CR-V 2017-22", min_steer_speed=12. * CV.MPH_TO_MS),
+  CAR.ACURA_ILX: HondaCarInfo("Acura ILX 2016-19", "AcuraWatch Plus"),
+  CAR.CRV: HondaCarInfo("Honda CR-V 2015-16", "Touring Trim"),
+  CAR.CRV_5G: HondaCarInfo("Honda CR-V 2017-22"),
   CAR.CRV_EU: None,  # HondaCarInfo("Honda CR-V EU", "Touring"),  # Euro version of CRV Touring
-  CAR.CRV_HYBRID: HondaCarInfo("Honda CR-V Hybrid 2017-20", min_steer_speed=12. * CV.MPH_TO_MS),
-  CAR.FIT: HondaCarInfo("Honda Fit 2018-20", min_steer_speed=12. * CV.MPH_TO_MS),
-  CAR.FREED: HondaCarInfo("Honda Freed 2020", min_steer_speed=12. * CV.MPH_TO_MS),
-  CAR.HRV: HondaCarInfo("Honda HR-V 2019-22", min_steer_speed=12. * CV.MPH_TO_MS),
+  CAR.CRV_HYBRID: HondaCarInfo("Honda CR-V Hybrid 2017-20"),
+  CAR.FIT: HondaCarInfo("Honda Fit 2018-20",),
+  CAR.FREED: HondaCarInfo("Honda Freed 2020"),
+  CAR.HRV: HondaCarInfo("Honda HR-V 2019-22"),
   CAR.HRV_3G: HondaCarInfo("Honda HR-V 2023", "All"),
   CAR.ODYSSEY: HondaCarInfo("Honda Odyssey 2018-20"),
   CAR.ODYSSEY_CHN: None,  # Chinese version of Odyssey
-  CAR.ACURA_RDX: HondaCarInfo("Acura RDX 2016-18", "AcuraWatch Plus", min_steer_speed=12. * CV.MPH_TO_MS),
-  CAR.ACURA_RDX_3G: HondaCarInfo("Acura RDX 2019-22", "All", min_steer_speed=3. * CV.MPH_TO_MS),
+  CAR.ACURA_RDX: HondaCarInfo("Acura RDX 2016-18", "AcuraWatch Plus"),
+  CAR.ACURA_RDX_3G: HondaCarInfo("Acura RDX 2019-22", "All"),
   CAR.PILOT: [
-    HondaCarInfo("Honda Pilot 2016-22", min_steer_speed=12. * CV.MPH_TO_MS),
-    HondaCarInfo("Honda Passport 2019-23", "All", min_steer_speed=12. * CV.MPH_TO_MS),
+    HondaCarInfo("Honda Pilot 2016-22"),
+    HondaCarInfo("Honda Passport 2019-23", "All"),
   ],
-  CAR.RIDGELINE: HondaCarInfo("Honda Ridgeline 2017-24", min_steer_speed=12. * CV.MPH_TO_MS),
-  CAR.INSIGHT: HondaCarInfo("Honda Insight 2019-22", "All", min_steer_speed=3. * CV.MPH_TO_MS),
-  CAR.HONDA_E: HondaCarInfo("Honda e 2020", "All", min_steer_speed=3. * CV.MPH_TO_MS),
+  CAR.RIDGELINE: HondaCarInfo("Honda Ridgeline 2017-24"),
+  CAR.INSIGHT: HondaCarInfo("Honda Insight 2019-22", "All"),
+  CAR.HONDA_E: HondaCarInfo("Honda e 2020", "All"),
 }
 
 HONDA_VERSION_REQUEST = bytes([uds.SERVICE_TYPE.READ_DATA_BY_IDENTIFIER]) + \

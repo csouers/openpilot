@@ -14,7 +14,6 @@ class CarState(CarStateBase):
 
     self.crz_btns_counter = 0
     self.acc_active_last = False
-    self.low_speed_alert = False
     self.lkas_allowed_speed = False
     self.lkas_disabled = False
 
@@ -65,15 +64,12 @@ class CarState(CarStateBase):
     # Either due to low speed or hands off
     lkas_blocked = cp.vl["STEER_RATE"]["LKAS_BLOCK"] == 1
 
-    if self.CP.minSteerSpeed > 0:
-      # LKAS is enabled at 52kph going up and disabled at 45kph going down
-      # wait for LKAS_BLOCK signal to clear when going up since it lags behind the speed sometimes
-      if speed_kph > LKAS_LIMITS.ENABLE_SPEED and not lkas_blocked:
-        self.lkas_allowed_speed = True
-      elif speed_kph < LKAS_LIMITS.DISABLE_SPEED:
-        self.lkas_allowed_speed = False
-    else:
+    # TODO: eliminate this once OP tracks active eps state
+    # wait for LKAS_BLOCK signal to clear when going up since it lags behind the speed sometimes
+    if (speed_kph * CV.KPH_TO_MS) > self.CP.minSteerEnableSpeed and not lkas_blocked:
       self.lkas_allowed_speed = True
+    elif (speed_kph * CV.KPH_TO_MS) < self.CP.minSteerDisableSpeed:
+      self.lkas_allowed_speed = False
 
     # TODO: the signal used for available seems to be the adaptive cruise signal, instead of the main on
     #       it should be used for carState.cruiseState.nonAdaptive instead
@@ -82,12 +78,7 @@ class CarState(CarStateBase):
     ret.cruiseState.standstill = cp.vl["PEDALS"]["STANDSTILL"] == 1
     ret.cruiseState.speed = cp.vl["CRZ_EVENTS"]["CRZ_SPEED"] * CV.KPH_TO_MS
 
-    if ret.cruiseState.enabled:
-      if not self.lkas_allowed_speed and self.acc_active_last:
-        self.low_speed_alert = True
-      else:
-        self.low_speed_alert = False
-
+    # TODO: refactor once OP logs the active state of the EPS
     # Check if LKAS is disabled due to lack of driver torque when all other states indicate
     # it should be enabled (steer lockout). Don't warn until we actually get lkas active
     # and lose it again, i.e, after initial lkas activation

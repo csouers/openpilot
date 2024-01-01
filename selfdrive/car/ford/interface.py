@@ -97,7 +97,7 @@ class CarInterface(CarInterfaceBase):
     ret.enableBsm = 0x3A6 in fingerprint[CAN.main] and 0x3A7 in fingerprint[CAN.main]
 
     # LCA can steer down to zero
-    ret.minSteerSpeed = 0.
+    ret.minSteerDisableSpeed = 0.
 
     ret.autoResumeSng = ret.minEnableSpeed == -1.
     ret.centerToFront = ret.wheelbase * 0.44

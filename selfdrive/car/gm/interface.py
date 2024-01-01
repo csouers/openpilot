@@ -107,7 +107,7 @@ class CarInterface(CarInterfaceBase):
       ret.pcmCruise = True
       ret.safetyConfigs[0].safetyParam |= Panda.FLAG_GM_HW_CAM
       ret.minEnableSpeed = 5 * CV.KPH_TO_MS
-      ret.minSteerSpeed = 10 * CV.KPH_TO_MS
+      ret.minSteerDisableSpeed = 10 * CV.KPH_TO_MS
 
       # Tuning for experimental long
       ret.longitudinalTuning.kpV = [2.0, 1.5]
@@ -128,7 +128,7 @@ class CarInterface(CarInterfaceBase):
       ret.pcmCruise = False  # stock non-adaptive cruise control is kept off
       # supports stop and go, but initial engage must (conservatively) be above 18mph
       ret.minEnableSpeed = 18 * CV.MPH_TO_MS
-      ret.minSteerSpeed = 7 * CV.MPH_TO_MS
+      ret.minSteerDisableSpeed = 7 * CV.MPH_TO_MS
 
       # Tuning
       ret.longitudinalTuning.kpV = [2.4, 1.5]
@@ -295,8 +295,6 @@ class CarInterface(CarInterfaceBase):
       events.add(EventName.belowEngageSpeed)
     if ret.cruiseState.standstill:
       events.add(EventName.resumeRequired)
-    if ret.vEgo < self.CP.minSteerSpeed:
-      events.add(EventName.belowSteerSpeed)
 
     ret.events = events.to_msg()
 

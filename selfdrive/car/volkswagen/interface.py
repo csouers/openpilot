@@ -112,7 +112,7 @@ class CarInterface(CarInterfaceBase):
     elif candidate == CAR.CRAFTER_MK2:
       ret.mass = 2100
       ret.wheelbase = 3.64  # SWB, LWB is 4.49, TBD how to detect difference
-      ret.minSteerSpeed = 50 * CV.KPH_TO_MS
+      ret.minSteerDisableSpeed = 50 * CV.KPH_TO_MS
 
     elif candidate == CAR.GOLF_MK7:
       ret.mass = 1397
@@ -130,7 +130,7 @@ class CarInterface(CarInterfaceBase):
       ret.mass = 1503
       ret.wheelbase = 2.80
       ret.minEnableSpeed = 20 * CV.KPH_TO_MS  # ACC "basic", no FtS
-      ret.minSteerSpeed = 50 * CV.KPH_TO_MS
+      ret.minSteerDisableSpeed = 50 * CV.KPH_TO_MS
       ret.steerActuatorDelay = 0.2
       CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning)
 
@@ -141,7 +141,7 @@ class CarInterface(CarInterfaceBase):
     elif candidate == CAR.SHARAN_MK2:
       ret.mass = 1639
       ret.wheelbase = 2.92
-      ret.minSteerSpeed = 50 * CV.KPH_TO_MS
+      ret.minSteerDisableSpeed = 50 * CV.KPH_TO_MS
       ret.steerActuatorDelay = 0.2
 
     elif candidate == CAR.TAOS_MK1:
@@ -163,7 +163,7 @@ class CarInterface(CarInterfaceBase):
     elif candidate == CAR.TRANSPORTER_T61:
       ret.mass = 1926
       ret.wheelbase = 3.00  # SWB, LWB is 3.40, TBD how to detect difference
-      ret.minSteerSpeed = 14.0
+      ret.minSteerDisableSpeed = 14.0
 
     elif candidate == CAR.TROC_MK1:
       ret.mass = 1413
@@ -231,14 +231,6 @@ class CarInterface(CarInterfaceBase):
     events = self.create_common_events(ret, extra_gears=[GearShifter.eco, GearShifter.sport, GearShifter.manumatic],
                                        pcm_enable=not self.CS.CP.openpilotLongitudinalControl,
                                        enable_buttons=(ButtonType.setCruise, ButtonType.resumeCruise))
-
-    # Low speed steer alert hysteresis logic
-    if self.CP.minSteerSpeed > 0. and ret.vEgo < (self.CP.minSteerSpeed + 1.):
-      self.low_speed_alert = True
-    elif ret.vEgo > (self.CP.minSteerSpeed + 2.):
-      self.low_speed_alert = False
-    if self.low_speed_alert:
-      events.add(EventName.belowSteerSpeed)
 
     if self.CS.CP.openpilotLongitudinalControl:
       if ret.vEgo < self.CP.minEnableSpeed + 0.5:

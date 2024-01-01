@@ -25,6 +25,8 @@ MAX_CTRL_SPEED = (V_CRUISE_MAX + 4) * CV.KPH_TO_MS
 ACCEL_MAX = 2.0
 ACCEL_MIN = -3.5
 FRICTION_THRESHOLD = 0.3
+# TODO: O QUE SERIA? Maybe just visual alert under this speed?
+LOW_STEER_ALERT_MIN_SPEED = 12 * CV.MPH_TO_MS
 
 TORQUE_PARAMS_PATH = os.path.join(BASEDIR, 'selfdrive/car/torque_data/params.toml')
 TORQUE_OVERRIDE_PATH = os.path.join(BASEDIR, 'selfdrive/car/torque_data/override.toml')
@@ -119,6 +121,10 @@ class CarInterfaceBase(ABC):
     ret.rotationalInertia = scale_rot_inertia(ret.mass, ret.wheelbase)
     ret.tireStiffnessFront, ret.tireStiffnessRear = scale_tire_stiffness(ret.mass, ret.wheelbase, ret.centerToFront, ret.tireStiffnessFactor)
 
+    ret.minSteerEnableSpeed = max(ret.minSteerEnableSpeed, ret.minSteerDisableSpeed)
+    if ret.notCar:
+      ret.minSteerEnableSpeed = ret.minSteerDisableSpeed
+
     return ret
 
   @staticmethod
@@ -161,7 +167,8 @@ class CarInterfaceBase(ABC):
     # standard ALC params
     ret.tireStiffnessFactor = 1.0
     ret.steerControlType = car.CarParams.SteerControlType.torque
-    ret.minSteerSpeed = 0.
+    ret.minSteerEnableSpeed = 0.  # steering control starts at this speed
+    ret.minSteerDisableSpeed = 0. # steering control ends at this speed
     ret.wheelSpeedFactor = 1.0
 
     ret.pcmCruise = True     # openpilot's state is tied to the PCM's cruise state on most cars
@@ -283,6 +290,12 @@ class CarInterfaceBase(ABC):
       # Disable on rising and falling edge of cancel for both stock and OP long
       if b.type == ButtonType.cancel:
         events.add(EventName.buttonCancel)
+
+    # TODO: Improve when the EPS' active state is tracked
+    # Low speed steer alert logic. Warn the user when driving near the drop out speed
+    low_speed_alert = (self.CP.minSteerDisableSpeed + 1.5) >= cs_out.vEgo >= LOW_STEER_ALERT_MIN_SPEED
+    if low_speed_alert:
+      events.add(EventName.belowSteerSpeed)
 
     # Handle permanent and temporary steering faults
     self.steering_unpressed = 0 if cs_out.steeringPressed else self.steering_unpressed + 1

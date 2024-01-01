@@ -184,6 +184,12 @@ class CommonFootnote(Enum):
     "If the Driver Support Unit (DSU) is disconnected, openpilot ACC will replace " +
     "stock ACC. <b><i>NOTE: disconnecting the DSU disables Automatic Emergency Braking (AEB).</i></b>",
     Column.LONGITUDINAL)
+  VARIABLE_STEER_SPEED = CarFootnote(
+    "ALC will become available after the car's speed has exceeded the higher of the two values listed. It will remain available " +
+    "until the car slows down to the lesser speed. Using certain vehicle features may also disengage ALC such as the " +
+    "windshield wipers or when the brake pedal is pressed. Not all limitations are listed here and may differ between " +
+    "makes, models, or trim levels, certain driving scenarios, or with the usage of openpilot ACC (not available on all models).",
+    Column.FSR_STEERING)
 
 
 def get_footnotes(footnotes: List[Enum], column: Column) -> List[Enum]:
@@ -237,7 +243,7 @@ class CarInfo:
 
   video_link: Optional[str] = None
   footnotes: List[Enum] = field(default_factory=list)
-  min_steer_speed: Optional[float] = None
+  min_steer_speed: Optional[list] = None
   min_enable_speed: Optional[float] = None
   auto_resume: Optional[bool] = None
 
@@ -264,11 +270,13 @@ class CarInfo:
       op_long = "openpilot"
 
     # min steer & enable speed columns
-    # TODO: set all the min steer speeds in carParams and remove this
-    if self.min_steer_speed is not None:
-      assert CP.minSteerSpeed == 0, f"{CP.carFingerprint}: Minimum steer speed set in both CarInfo and CarParams"
-    else:
-      self.min_steer_speed = CP.minSteerSpeed
+    min_steer_upper = CP.minSteerEnableSpeed if not self.min_steer_speed else max(self.min_steer_speed)
+    min_steer_lower = CP.minSteerDisableSpeed if not self.min_steer_speed else min(self.min_steer_speed)
+    self.min_steer_speed = max(min_steer_upper, min_steer_lower)
+    min_steer_speed = f"{max(min_steer_upper * CV.MS_TO_MPH, 0):.0f} mph"
+    if min_steer_upper != min_steer_lower:
+      self.footnotes.append(CommonFootnote.VARIABLE_STEER_SPEED)
+      min_steer_speed = f"{max(min_steer_upper * CV.MS_TO_MPH, 0):.0f} - {max(min_steer_lower * CV.MS_TO_MPH, 0):.0f} mph"
 
     # TODO: set all the min enable speeds in carParams correctly and remove this
     if self.min_enable_speed is None:
@@ -299,7 +307,7 @@ class CarInfo:
       Column.PACKAGE: self.package,
       Column.LONGITUDINAL: op_long,
       Column.FSR_LONGITUDINAL: f"{max(self.min_enable_speed * CV.MS_TO_MPH, 0):.0f} mph",
-      Column.FSR_STEERING: f"{max(self.min_steer_speed * CV.MS_TO_MPH, 0):.0f} mph",
+      Column.FSR_STEERING: min_steer_speed,
       Column.STEERING_TORQUE: Star.EMPTY,
       Column.AUTO_RESUME: Star.FULL if self.auto_resume else Star.EMPTY,
       Column.HARDWARE: hardware_col,
