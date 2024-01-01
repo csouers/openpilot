@@ -224,7 +224,7 @@ class CarController:
             setting = CruiseButtons.LKAS
       if cruise is not None:
         can_sends.append(hondacan.create_buttons_command(self.packer, cruise, setting, CS.scm_buttons, self.CP.carFingerprint))
-
+        # print(f'frame: {self.frame}: pcm_cancel: {pcm_cancel_cmd}: button: {button} : lkas: {CS.lkas_hud["ENABLED"]} : setting {setting}')
     else:
       # Send gas and brake commands.
       if self.frame % 2 == 0:
