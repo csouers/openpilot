@@ -3,7 +3,7 @@ name: selfdrive
 on:
   push:
     branches:
-      - master
+      - honda_scm
   pull_request:
   workflow_dispatch:
 
