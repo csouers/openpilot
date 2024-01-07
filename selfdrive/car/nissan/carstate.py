@@ -79,8 +79,12 @@ class CarState(CarStateBase):
 
     if self.CP.carFingerprint == CAR.ALTIMA:
       ret.steeringTorque = cp_cam.vl["STEER_TORQUE_SENSOR"]["STEER_TORQUE_DRIVER"]
+      # Triggered by LKA_ACTIVE on LKAS
+      ret.steerEnabled = bool(cp_cam.vl["STEER_TORQUE_SENSOR"]["LKAS_ACTIVE"])
     else:
       ret.steeringTorque = cp.vl["STEER_TORQUE_SENSOR"]["STEER_TORQUE_DRIVER"]
+      # Triggered by LKA_ACTIVE on LKAS
+      ret.steerEnabled = bool(cp.vl["STEER_TORQUE_SENSOR"]["LKAS_ACTIVE"])
 
     self.steeringTorqueSamples.append(ret.steeringTorque)
     # Filtering driver torque to prevent steeringPressed false positives

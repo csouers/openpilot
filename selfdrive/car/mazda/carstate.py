@@ -63,12 +63,12 @@ class CarState(CarStateBase):
     ret.gasPressed = ret.gas > 0
 
     # Either due to low speed or hands off
-    lkas_blocked = cp.vl["STEER_RATE"]["LKAS_BLOCK"] == 1
+    ret.steerEnabled = cp.vl["STEER_RATE"]["LKAS_BLOCK"] == 0
 
     if self.CP.minSteerSpeed > 0:
       # LKAS is enabled at 52kph going up and disabled at 45kph going down
       # wait for LKAS_BLOCK signal to clear when going up since it lags behind the speed sometimes
-      if speed_kph > LKAS_LIMITS.ENABLE_SPEED and not lkas_blocked:
+      if speed_kph > LKAS_LIMITS.ENABLE_SPEED and ret.steerEnabled:
         self.lkas_allowed_speed = True
       elif speed_kph < LKAS_LIMITS.DISABLE_SPEED:
         self.lkas_allowed_speed = False
@@ -91,7 +91,7 @@ class CarState(CarStateBase):
     # Check if LKAS is disabled due to lack of driver torque when all other states indicate
     # it should be enabled (steer lockout). Don't warn until we actually get lkas active
     # and lose it again, i.e, after initial lkas activation
-    ret.steerFaultTemporary = self.lkas_allowed_speed and lkas_blocked
+    ret.steerFaultTemporary = self.lkas_allowed_speed and not ret.steerEnabled
 
     self.acc_active_last = ret.cruiseState.enabled
 

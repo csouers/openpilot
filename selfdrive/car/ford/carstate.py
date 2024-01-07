@@ -70,6 +70,9 @@ class CarState(CarStateBase):
     if not self.CP.openpilotLongitudinalControl:
       ret.accFaulted = ret.accFaulted or cp_cam.vl["ACCDATA"]["CmbbDeny_B_Actl"] == 1
 
+    # I didn't see anything like this on either of the message sets for this platform
+    ret.steerEnabled = self.out.cruiseState.enabled
+
     # gear
     if self.CP.transmissionType == TransmissionType.automatic:
       gear = self.shifter_values.get(cp.vl["Gear_Shift_by_Wire_FD1"]["TrnRng_D_RqGsm"])

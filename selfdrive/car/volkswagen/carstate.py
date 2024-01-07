@@ -58,6 +58,8 @@ class CarState(CarStateBase):
     hca_status = self.CCP.hca_status_values.get(pt_cp.vl["LH_EPS_03"]["EPS_HCA_Status"])
     ret.steerFaultPermanent = hca_status in ("DISABLED", "FAULT")
     ret.steerFaultTemporary = hca_status in ("INITIALIZING", "REJECTED")
+    # Triggered by HCA_01_Status_HCA == 5 (if the requested steer torque is non-zero)
+    ret.steerEnabled = hca_status == "ACTIVE"
 
     # Update gas, brakes, and gearshift.
     ret.gas = pt_cp.vl["Motor_20"]["MO_Fahrpedalrohwert_01"] / 100.0
@@ -174,6 +176,8 @@ class CarState(CarStateBase):
     hca_status = self.CCP.hca_status_values.get(pt_cp.vl["Lenkhilfe_2"]["LH2_Sta_HCA"])
     ret.steerFaultPermanent = hca_status in ("DISABLED", "FAULT")
     ret.steerFaultTemporary = hca_status in ("INITIALIZING", "REJECTED")
+    # Triggered by HCA_Status on HCA_1
+    ret.steerEnabled = hca_status == "ACTIVE"
 
     # Update gas, brakes, and gearshift.
     ret.gas = pt_cp.vl["Motor_3"]["Fahrpedal_Rohsignal"] / 100.0

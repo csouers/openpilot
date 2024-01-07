@@ -45,6 +45,8 @@ class CarState(CarStateBase):
     ret.steeringRateDeg = -cp.vl["STW_ANGLHP_STAT"]["StW_AnglHP_Spd"] # This is from a different angle sensor, and at different rate
     ret.steeringTorque = -cp.vl["EPAS_sysStatus"]["EPAS_torsionBarTorque"]
     ret.steeringPressed = (self.hands_on_level > 0)
+    # Triggered by DAS_steeringControlType
+    ret.steerEnabled = steer_status == "EAC_ACTIVE"
     ret.steerFaultPermanent = steer_status == "EAC_FAULT"
     ret.steerFaultTemporary = (self.steer_warning not in ("EAC_ERROR_IDLE", "EAC_ERROR_HANDS_ON"))
 

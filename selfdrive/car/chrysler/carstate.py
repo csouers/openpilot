@@ -83,9 +83,13 @@ class CarState(CarStateBase):
       # Auto High Beam isn't Located in this message on chrysler or jeep currently located in 729 message
       self.auto_high_beam = cp_cam.vl["DAS_6"]['AUTO_HIGH_BEAM_ON']
       ret.steerFaultTemporary = cp.vl["EPS_3"]["DASM_FAULT"] == 1
+      # Triggered by LKAS_CONTROL_BIT on OP's LKAS_COMMAND
+      ret.steerEnabled = cp.vl["EPS_3"]["Activation_Status"] == 2
     else:
       ret.steerFaultTemporary = cp.vl["EPS_2"]["LKAS_TEMPORARY_FAULT"] == 1
       ret.steerFaultPermanent = cp.vl["EPS_2"]["LKAS_STATE"] == 4
+      # Triggered by LKAS_CONTROL_BIT on OP's LKAS_COMMAND
+      ret.steerEnabled = cp.vl["EPS_2"]["LKAS_STATE"] == 8
 
     # blindspot sensors
     if self.CP.enableBsm:
