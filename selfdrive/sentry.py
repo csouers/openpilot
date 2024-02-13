@@ -64,7 +64,7 @@ def set_tag(key: str, value: str) -> None:
 
 def init(project: SentryProject) -> bool:
   # forks like to mess with this, so double check
-  af_remote = "csouers" in get_origin(default="")
+  af_remote = "csouers" in get_origin()
   if not af_remote or not is_registered_device() or PC:
     print('sentry: device or remote not allowed')
     return False
