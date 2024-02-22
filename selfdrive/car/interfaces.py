@@ -122,8 +122,6 @@ class CarInterfaceBase(ABC):
     ret.tireStiffnessFront, ret.tireStiffnessRear = scale_tire_stiffness(ret.mass, ret.wheelbase, ret.centerToFront, ret.tireStiffnessFactor)
 
     ret.minSteerEnableSpeed = max(ret.minSteerEnableSpeed, ret.minSteerDisableSpeed)
-    if ret.notCar:
-      ret.minSteerEnableSpeed = ret.minSteerDisableSpeed
 
     return ret
 

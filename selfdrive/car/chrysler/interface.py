@@ -78,10 +78,13 @@ class CarInterface(CarInterfaceBase):
     else:
       raise ValueError(f"Unsupported car: {candidate}")
 
-    # TODO: simplify? its only really used here
-    # if steering engages at a speed greater than where it disengages
-    if ret.flags & ChryslerFlags.HIGHER_MIN_STEERING_SPEED:
-      # TODO: Durango 2020 may be able to steer to zero once above 38 kph
+      if candidate in (CAR.DODGE_DURANGO, ):
+        ret.minSteerEnableSpeed = 10.6 # 38 kph
+        ret.minSteerDisableSpeed = 0.
+      else:
+        ret.minSteerEnableSpeed = 17.5 # m/s
+        ret.minSteerDisableSpeed = 13.5 # m/s. speed per comment from
+      # https://github.com/commaai/openpilot/blame/5aff2b68851e3a65a98bcd075945793c14f6e7c5/selfdrive/car/chrysler/carcontroller.py#L46
       ret.minSteerEnableSpeed = 17.5 # m/s
       ret.minSteerDisableSpeed = 13.5 # m/s. speed per comment from
       # https://github.com/commaai/openpilot/blame/5aff2b68851e3a65a98bcd075945793c14f6e7c5/selfdrive/car/chrysler/carcontroller.py#L46
