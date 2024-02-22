@@ -68,7 +68,7 @@ class CarState(CarStateBase):
     # wait for LKAS_BLOCK signal to clear when going up since it lags behind the speed sometimes
     if (speed_kph * CV.KPH_TO_MS) > self.CP.minSteerEnableSpeed and not lkas_blocked:
       self.lkas_allowed_speed = True
-    elif (speed_kph * CV.KPH_TO_MS) < self.CP.minSteerDisableSpeed:
+    elif (speed_kph * CV.KPH_TO_MS) <= self.CP.minSteerDisableSpeed:
       self.lkas_allowed_speed = False
 
     # TODO: the signal used for available seems to be the adaptive cruise signal, instead of the main on
