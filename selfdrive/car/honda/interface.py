@@ -91,6 +91,7 @@ class CarInterface(CarInterfaceBase):
 
     # default value. applicable to most models
     ret.minSteerDisableSpeed = 12. * CV.MPH_TO_MS
+
     if candidate == CAR.CIVIC:
       ret.mass = 1326.
       ret.wheelbase = 2.70
@@ -131,13 +132,11 @@ class CarInterface(CarInterfaceBase):
       ret.steerRatio = 16.33  # 11.82 is spec end-to-end
       ret.lateralParams.torqueBP, ret.lateralParams.torqueV = [[0, 4096], [0, 4096]]  # TODO: determine if there is a dead zone at the top end
       ret.tireStiffnessFactor = 0.8467
-
       if eps_modified:
         ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.3], [0.09]]
-        ret.minSteerDisableSpeed = 0.
       else:
         ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.6], [0.18]]
-        ret.minSteerDisableSpeed = 3. * CV.MPH_TO_MS
+      ret.minSteerDisableSpeed = 3. * CV.MPH_TO_MS
 
     elif candidate == CAR.ACURA_ILX:
       ret.mass = 3095. * CV.LB_TO_KG
