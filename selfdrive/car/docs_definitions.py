@@ -185,10 +185,10 @@ class CommonFootnote(Enum):
     "stock ACC. <b><i>NOTE: disconnecting the DSU disables Automatic Emergency Braking (AEB).</i></b>",
     Column.LONGITUDINAL)
   VARIABLE_STEER_SPEED = CarFootnote(
-    "ALC will become available after the car's speed has exceeded the higher of the two values listed. It will remain available " +
-    "until the car slows down to the lesser speed. Using certain vehicle features may also disengage ALC such as the " +
-    "windshield wipers or when the brake pedal is pressed. Not all limitations are listed here and may differ between " +
-    "makes, models, or trim levels, certain driving scenarios, or with the usage of openpilot ACC (not available on all models).",
+    "ALC activates once the car exceeds the higher speed of the two listed values and remains active until the car slows " ,
+    "down to the lower speed. Using certain vehicle features may also disengage ALC such as the windshield wipers " +
+    "or when the brake pedal is pressed. Not all limitations are listed here and may differ between cars, ecu firmware " +
+    "versions, driving scenarios, or with the usage of openpilot ACC (not available on all models).",
     Column.FSR_STEERING)
 
 
