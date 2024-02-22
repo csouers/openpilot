@@ -668,7 +668,7 @@ class Controls:
     CC.enabled = self.enabled
 
     # Check which actuators can be enabled.
-    # TODO: change to minSteerDisableSpeed
+    # TODO: change to minSteerDisableSpeed after steerActive is in.
     standstill = CS.vEgo <= max(self.CP.minSteerEnableSpeed, MIN_LATERAL_CONTROL_SPEED) or CS.standstill
     CC.latActive = self.active and not CS.steerFaultTemporary and not CS.steerFaultPermanent and \
                    (not standstill or self.joystick_mode)
