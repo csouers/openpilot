@@ -117,7 +117,6 @@ class CarController:
     self.apply_brake_last = 0
     self.last_pump_ts = 0.
     self.stopping_counter = 0
-    self.next_lat = 0
 
     self.accel = 0.0
     self.speed = 0.0
@@ -132,10 +131,6 @@ class CarController:
     hud_v_cruise = hud_control.setSpeed / conversion if hud_control.speedVisible else 255
     pcm_cancel_cmd = CC.cruiseControl.cancel
 
-    # Radarless. Delay torque for 150ms when steering first starts
-    if not CC.latActive:
-      self.next_lat = self.frame + 15
-
     if CC.longActive:
       accel = actuators.accel
       gas, brake = compute_gas_brake(actuators.accel, CS.out.vEgo, self.CP.carFingerprint)
@@ -144,9 +139,7 @@ class CarController:
       gas, brake = 0.0, 0.0
 
     # *** rate limit steer ***
-    limited_steer = 0.
-    if (self.frame - self.next_lat) >= 0:
-      limited_steer = rate_limit_steer(actuators.steer, self.last_steer)
+    limited_steer = rate_limit_steer(actuators.steer, self.last_steer)
     self.last_steer = limited_steer
 
     # *** apply brake hysteresis ***
