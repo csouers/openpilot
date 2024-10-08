@@ -809,6 +809,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   EventName.processNotRunning: {
     ET.NO_ENTRY: process_not_running_alert,
     ET.SOFT_DISABLE: soft_disable_alert("Process Not Running"),
+    ET.PERMANENT: process_not_running_alert,
   },
 
   EventName.radarFault: {

@@ -150,6 +150,7 @@ class Controls:
     hudControl.leadVisible = self.sm['longitudinalPlan'].hasLead
     hudControl.leadDistanceBars = self.sm['selfdriveState'].personality.raw + 1
     hudControl.visualAlert = self.sm['selfdriveState'].alertHudVisual
+    hudControl.e2e = self.experimental_mode
 
     hudControl.rightLaneVisible = True
     hudControl.leftLaneVisible = True

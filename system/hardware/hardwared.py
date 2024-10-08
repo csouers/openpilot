@@ -328,6 +328,8 @@ def hardware_thread(end_event, hw_queue) -> None:
             if not model.startswith("Samsung SSD 980") and params.get("Offroad_BadNvme") is None:
               set_offroad_alert_if_changed("Offroad_BadNvme", True)
               cloudlog.event("Unsupported NVMe", model=model, error=True)
+          except FileNotFoundError:
+            set_offroad_alert_if_changed("Offroad_StorageMissing", True)
           except Exception:
             pass
 

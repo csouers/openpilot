@@ -27,7 +27,7 @@ from openpilot.system.version import get_build_metadata
 REPLAY = "REPLAY" in os.environ
 SIMULATION = "SIMULATION" in os.environ
 TESTING_CLOSET = "TESTING_CLOSET" in os.environ
-IGNORE_PROCESSES = {"loggerd", "encoderd", "statsd"}
+IGNORE_PROCESSES = {"statsd"}
 LONGITUDINAL_PERSONALITY_MAP = {v: k for k, v in log.LongitudinalPersonality.schema.enumerants.items()}
 
 ThermalStatus = log.DeviceState.ThermalStatus
@@ -366,6 +366,10 @@ class SelfdriveD:
         self.personality = (self.personality - 1) % 3
         self.params.put_nonblocking('LongitudinalPersonality', str(self.personality))
         self.events.add(EventName.personalityChanged)
+
+      elif any(not be.pressed and be.type == ButtonType.altButton1 for be in CS.buttonEvents):
+        self.experimental_mode = not self.experimental_mode
+        self.params.put_bool_nonblocking("ExperimentalMode", self.experimental_mode)
 
   def data_sample(self):
     car_state = messaging.recv_one(self.car_state_sock)
