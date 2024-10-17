@@ -33,7 +33,7 @@ def visualize(addr):
     if sm.recv_frame['radarState']:
       plot_lead(sm['radarState'], lid_overlay)
     liveTracksTime = sm.logMonoTime['liveTracks']
-    if sm.updated['liveTracks']:
+    if sm.recv_frame['liveTracks']:
       update_radar_points(sm['liveTracks'], lid_overlay)
     rr.set_time_nanos("TIMELINE", liveTracksTime)
     rr.log("tracks", rr.SegmentationImage(np.flip(np.rot90(lid_overlay, k=-1), axis=1)))
