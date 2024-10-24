@@ -361,7 +361,7 @@ class SelfdriveD:
         self.params.put_nonblocking('LongitudinalPersonality', str(self.personality))
         self.events.add(EventName.personalityChanged)
 
-      elif any(not be.pressed and be.type == ButtonType.altButton1 for be in CS.buttonEvents):
+      elif any(not be.pressed and be.type == ButtonType.lkas for be in CS.buttonEvents):
         self.experimental_mode = not self.experimental_mode
         self.params.put_bool_nonblocking("ExperimentalMode", self.experimental_mode)
 
