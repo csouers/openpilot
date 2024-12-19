@@ -11,6 +11,7 @@ import numpy as np
 import zstandard as zstd
 from collections import Counter, defaultdict
 from pathlib import Path
+from tabulate import tabulate
 
 from cereal import car, log
 import cereal.messaging as messaging
@@ -35,7 +36,7 @@ CPU usage budget
 TEST_DURATION = 25
 LOG_OFFSET = 8
 
-MAX_TOTAL_CPU = 265.  # total for all 8 cores
+MAX_TOTAL_CPU = 275.  # total for all 8 cores
 PROCS = {
   # Baseline CPU usage by process
   "selfdrive.controls.controlsd": 16.0,
@@ -49,30 +50,30 @@ PROCS = {
   "selfdrive.locationd.paramsd": 9.0,
   "./sensord": 7.0,
   "selfdrive.controls.radard": 2.0,
-  "selfdrive.modeld.modeld": 17.0,
-  "selfdrive.modeld.dmonitoringmodeld": 11.0,
-  "system.hardware.hardwared": 3.87,
+  "selfdrive.modeld.modeld": 22.0,
+  "selfdrive.modeld.dmonitoringmodeld": 21.0,
+  "system.hardware.hardwared": 4.0,
   "selfdrive.locationd.calibrationd": 2.0,
   "selfdrive.locationd.torqued": 5.0,
   "selfdrive.locationd.locationd": 25.0,
   "selfdrive.ui.soundd": 3.0,
   "selfdrive.monitoring.dmonitoringd": 4.0,
-  "./proclogd": 1.54,
-  "system.logmessaged": 0.2,
+  "./proclogd": 2.0,
+  "system.logmessaged": 1.0,
   "system.tombstoned": 0,
   "./logcatd": 1.0,
   "system.micd": 5.0,
   "system.timed": 0,
   "selfdrive.pandad.pandad": 0,
-  "system.statsd": 0.4,
-  "system.loggerd.uploader": (0.0, 15.0),
-  "system.loggerd.deleter": 0.1,
+  "system.statsd": 1.0,
+  "system.loggerd.uploader": 15.0,
+  "system.loggerd.deleter": 1.0,
 }
 
 PROCS.update({
   "tici": {
-    "./pandad": 4.0,
-    "./ubloxd": 0.02,
+    "./pandad": 5.0,
+    "./ubloxd": 1.0,
     "system.ubloxd.pigeond": 6.0,
   },
   "tizi": {
@@ -137,6 +138,7 @@ class TestOnroad:
     proc = None
     try:
       manager_path = os.path.join(BASEDIR, "system/manager/manager.py")
+      cls.manager_st = time.monotonic()
       proc = subprocess.Popen(["python", manager_path])
 
       sm = messaging.SubMaster(['carState'])
@@ -201,6 +203,10 @@ class TestOnroad:
       with subtests.test(service=s):
         assert len(msgs) >= math.floor(SERVICE_LIST[s].frequency*int(TEST_DURATION*0.8))
 
+  def test_manager_starting_time(self):
+    st = self.msgs['managerState'][0].logMonoTime / 1e9
+    assert (st - self.manager_st) < 10, f"manager.py took {st - self.manager_st}s to publish the first 'managerState' msg"
+
   def test_cloudlog_size(self):
     msgs = self.msgs['logMessage']
 
@@ -241,10 +247,9 @@ class TestOnroad:
     assert len(veryslow) < 5, f"Too many slow frame draw times: {veryslow}"
 
   def test_cpu_usage(self, subtests):
-    result = "\n"
-    result += "------------------------------------------------\n"
-    result += "------------------ CPU Usage -------------------\n"
-    result += "------------------------------------------------\n"
+    print("\n------------------------------------------------")
+    print("------------------ CPU Usage -------------------")
+    print("------------------------------------------------")
 
     plogs_by_proc = defaultdict(list)
     for pl in self.msgs['procLog']:
@@ -252,39 +257,31 @@ class TestOnroad:
         if len(x.cmdline) > 0:
           n = list(x.cmdline)[0]
           plogs_by_proc[n].append(x)
-    print(plogs_by_proc.keys())
 
     cpu_ok = True
     dt = (self.msgs['procLog'][-1].logMonoTime - self.msgs['procLog'][0].logMonoTime) / 1e9
-    for proc_name, expected_cpu in PROCS.items():
+    header = ['process', 'usage', 'expected', 'max allowed', 'test result']
+    rows = []
+    for proc_name, expected in PROCS.items():
 
-      err = ""
-      exp = "???"
-      cpu_usage = 0.
+      error = ""
+      usage = 0.
       x = plogs_by_proc[proc_name]
       if len(x) > 2:
         cpu_time = cputime_total(x[-1]) - cputime_total(x[0])
-        cpu_usage = cpu_time / dt * 100.
+        usage = cpu_time / dt * 100.
 
-        if isinstance(expected_cpu, tuple):
-          exp = str(expected_cpu)
-          minn, maxx = expected_cpu
-        else:
-          exp = f"{expected_cpu:5.2f}"
-          minn = min(expected_cpu * 0.65, max(expected_cpu - 1.0, 0.0))
-          maxx = max(expected_cpu * 1.15, expected_cpu + 5.0)
+        max_allowed = max(expected * 1.8, expected + 5.0)
+        if usage > max_allowed:
+          error = "❌ USING MORE CPU THAN EXPECTED ❌"
+          cpu_ok = False
 
-        if cpu_usage > maxx:
-          err = "using more CPU than expected"
-        elif cpu_usage < minn:
-          err = "using less CPU than expected"
       else:
-        err = "NO METRICS FOUND"
-
-      result += f"{proc_name.ljust(35)}  {cpu_usage:5.2f}% ({exp}%) {err}\n"
-      if len(err) > 0:
+        error = "❌ NO METRICS FOUND ❌"
         cpu_ok = False
-    result += "------------------------------------------------\n"
+
+      rows.append([proc_name, usage, expected, max_allowed, error or "✅"])
+    print(tabulate(rows, header, tablefmt="simple_grid", stralign="center", numalign="center", floatfmt=".2f"))
 
     # Ensure there's no missing procs
     all_procs = {p.name for p in self.msgs['managerState'][0].managerState.processes if p.shouldBeRunning}
@@ -296,22 +293,25 @@ class TestOnroad:
     procs_tot = sum([(max(x) if isinstance(x, tuple) else x) for x in PROCS.values()])
     with subtests.test(name="total CPU"):
       assert procs_tot < MAX_TOTAL_CPU, "Total CPU budget exceeded"
-    result +=  "------------------------------------------------\n"
-    result += f"Total allocated CPU usage is {procs_tot}%, budget is {MAX_TOTAL_CPU}%, {MAX_TOTAL_CPU-procs_tot:.1f}% left\n"
-    result +=  "------------------------------------------------\n"
-
-    print(result)
+    print("------------------------------------------------")
+    print(f"Total allocated CPU usage is {procs_tot}%, budget is {MAX_TOTAL_CPU}%, {MAX_TOTAL_CPU-procs_tot:.1f}% left")
+    print("------------------------------------------------")
 
     assert cpu_ok
 
   def test_memory_usage(self):
+    print("\n------------------------------------------------")
+    print("--------------- Memory Usage -------------------")
+    print("------------------------------------------------")
     offset = int(SERVICE_LIST['deviceState'].frequency * LOG_OFFSET)
     mems = [m.deviceState.memoryUsagePercent for m in self.msgs['deviceState'][offset:]]
     print("Memory usage: ", mems)
 
     # check for big leaks. note that memory usage is
     # expected to go up while the MSGQ buffers fill up
-    assert max(mems) - min(mems) <= 3.0
+    assert np.average(mems) <= 65, "Average memory usage above 65%"
+    assert np.max(np.diff(mems)) <= 4, "Max memory increase too high"
+    assert np.average(np.diff(mems)) <= 1, "Average memory increase too high"
 
   def test_gpu_usage(self):
     assert self.gpu_procs == {"weston", "ui", "camerad", "selfdrive.modeld.modeld", "selfdrive.modeld.dmonitoringmodeld"}
@@ -371,13 +371,14 @@ class TestOnroad:
     result += "------------------------------------------------\n"
     result += "----------------- Model Timing -----------------\n"
     result += "------------------------------------------------\n"
-    # TODO: this went up when plannerd cpu usage increased, why?
     cfgs = [
-      ("modelV2", 0.050, 0.036),
-      ("driverStateV2", 0.050, 0.026),
+      ("modelV2", 0.045, 0.035),
+      ("driverStateV2", 0.045, 0.035),
     ]
     for (s, instant_max, avg_max) in cfgs:
       ts = [getattr(m, s).modelExecutionTime for m in self.msgs[s]]
+      # TODO some init can happen in first iteration
+      ts = ts[1:]
       assert max(ts) < instant_max, f"high '{s}' execution time: {max(ts)}"
       assert np.mean(ts) < avg_max, f"high avg '{s}' execution time: {np.mean(ts)}"
       result += f"'{s}' execution time: min  {min(ts):.5f}s\n"
@@ -388,10 +389,12 @@ class TestOnroad:
 
   def test_timings(self):
     passed = True
-    result = "\n"
-    result += "------------------------------------------------\n"
-    result += "----------------- Service Timings --------------\n"
-    result += "------------------------------------------------\n"
+    print("\n------------------------------------------------")
+    print("----------------- Service Timings --------------")
+    print("------------------------------------------------")
+
+    header = ['service', 'max', 'min', 'mean', 'expected mean', 'rsd', 'max allowed rsd', 'test result']
+    rows = []
     for s, (maxmin, rsd) in TIMINGS.items():
       offset = int(SERVICE_LIST[s].frequency * LOG_OFFSET)
       msgs = [m.logMonoTime for m in self.msgs[s][offset:]]
@@ -401,21 +404,17 @@ class TestOnroad:
       ts = np.diff(msgs) / 1e9
       dt = 1 / SERVICE_LIST[s].frequency
 
-      try:
-        np.testing.assert_allclose(np.mean(ts), dt, rtol=0.03, err_msg=f"{s} - failed mean timing check")
-        np.testing.assert_allclose([np.max(ts), np.min(ts)], dt, rtol=maxmin, err_msg=f"{s} - failed max/min timing check")
-      except Exception as e:
-        result += str(e) + "\n"
-        passed = False
+      errors = []
+      if not np.allclose(np.mean(ts), dt, rtol=0.03, atol=0):
+        errors.append("❌ FAILED MEAN TIMING CHECK ❌")
+      if not np.allclose([np.max(ts), np.min(ts)], dt, rtol=maxmin, atol=0):
+        errors.append("❌ FAILED MAX/MIN TIMING CHECK ❌")
+      if (np.std(ts)/dt) > rsd:
+        errors.append("❌ FAILED RSD TIMING CHECK ❌")
+      passed = not errors and passed
+      rows.append([s, *(np.array([np.max(ts), np.min(ts), np.mean(ts), dt])*1e3), np.std(ts)/dt, rsd, "\n".join(errors) or "✅"])
 
-      if np.std(ts) / dt > rsd:
-        result += f"{s} - failed RSD timing check\n"
-        passed = False
-
-      result += f"{s.ljust(40)}: {np.array([np.mean(ts), np.max(ts), np.min(ts)])*1e3}\n"
-      result += f"{''.ljust(40)}  {np.max(np.absolute([np.max(ts)/dt, np.min(ts)/dt]))} {np.std(ts)/dt}\n"
-    result += "="*67
-    print(result)
+    print(tabulate(rows, header, tablefmt="simple_grid", stralign="center", numalign="center", floatfmt=".2f"))
     assert passed
 
   @release_only

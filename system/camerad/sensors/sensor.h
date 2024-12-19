@@ -43,6 +43,7 @@ public:
   float dc_gain_on_grey;
   float dc_gain_off_grey;
 
+  float ev_scale = 1.0;
   float sensor_analog_gains[ANALOG_GAIN_MAX_CNT];
   int analog_gain_min_idx;
   int analog_gain_max_idx;
@@ -61,7 +62,7 @@ public:
   std::vector<i2c_random_wr_payload> init_reg_array;
 
   uint32_t bits_per_pixel;
-  uint32_t bayer_pattern = CAM_ISP_PATTERN_BAYER_GRGRGR;
+  uint32_t bayer_pattern;
   uint32_t mipi_format;
   uint32_t mclk_frequency;
   uint32_t frame_data_type;

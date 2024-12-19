@@ -67,6 +67,10 @@ Panda *connect(std::string serial="", uint32_t index=0) {
   }
   //panda->enable_deepsleep();
 
+  for (int i = 0; i < PANDA_BUS_CNT; i++) {
+    panda->set_can_fd_auto(i, true);
+  }
+
   if (!panda->up_to_date() && !getenv("BOARDD_SKIP_FW_CHECK")) {
     throw std::runtime_error("Panda firmware out of date. Run pandad.py to update.");
   }
@@ -306,6 +310,16 @@ void send_peripheral_state(Panda *panda, PubMaster *pm) {
     LOGW("reading hwmon took %lfms", read_time);
   }
 
+  // fall back to panda's voltage and current measurement
+  if (ps.getVoltage() == 0 && ps.getCurrent() == 0) {
+    auto health_opt = panda->get_state();
+    if (health_opt) {
+      health_t health = *health_opt;
+      ps.setVoltage(health.voltage_pkt);
+      ps.setCurrent(health.current_pkt);
+    }
+  }
+
   uint16_t fan_speed_rpm = panda->get_fan_speed();
   ps.setFanSpeedRpm(fan_speed_rpm);
 
@@ -402,6 +416,7 @@ void process_peripheral_state(Panda *panda, PubMaster *pm, bool no_fan_control) 
 
     if (ir_pwr != prev_ir_pwr || sm.frame % 100 == 0 || ir_pwr >= 50.0) {
       panda->set_ir_pwr(ir_pwr);
+      Hardware::set_ir_power(ir_pwr);
       prev_ir_pwr = ir_pwr;
     }
   }
