@@ -72,9 +72,10 @@ def plot_lead(rs, lid_overlay):
 def update_radar_points(lt, lid_overlay):
   ar_pts = []
   if lt is not None:
+    print(lt)
     ar_pts = {}
-    for track in lt:
-      ar_pts[track.trackId] = [track.dRel, track.yRel, track.vRel, track.aRel, track.oncoming, track.stationary]
+    for track in lt.points:
+      ar_pts[track.trackId] = [track.dRel, track.yRel, track.vRel, track.aRel]
   for ids, pt in ar_pts.items():
     # negative here since radar is left positive
     px, py = to_topdown_pt(pt[0], -pt[1])
