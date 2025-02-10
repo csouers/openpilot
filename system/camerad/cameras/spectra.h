@@ -1,5 +1,6 @@
 #pragma once
 
+#include <sys/mman.h>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -8,7 +9,7 @@
 #include "media/cam_req_mgr.h"
 
 #include "common/util.h"
-#include "system/camerad/cameras/tici.h"
+#include "system/camerad/cameras/hw.h"
 #include "system/camerad/cameras/camera_common.h"
 #include "system/camerad/sensors/sensor.h"
 
@@ -27,6 +28,12 @@ const int MIPI_SETTLE_CNT = 33;  // Calculated by camera_freqs.py
 #define CSLDeviceTypeBPS         (0x10 << 24)
 #define OpcodesIFEInitialConfig  0x0
 #define OpcodesIFEUpdate         0x1
+
+typedef enum {
+  ISP_RAW_OUTPUT,   // raw frame from sensor
+  ISP_IFE_PROCESSED,  // fully processed image through the IFE
+  ISP_BPS_PROCESSED,  // fully processed image through the BPS
+} SpectraOutputType;
 
 std::optional<int32_t> device_acquire(int fd, int32_t session_handle, void *data, uint32_t num_resources=1);
 int device_config(int fd, int32_t session_handle, int32_t dev_handle, uint64_t packet_handle);
@@ -72,10 +79,21 @@ public:
 
 class SpectraBuf {
 public:
+  SpectraBuf() = default;
+
+  ~SpectraBuf() {
+    if (video_fd >= 0 && ptr) {
+      munmap(ptr, mmap_size);
+      release(video_fd, handle);
+    }
+  }
+
   void init(SpectraMaster *m, int s, int a, int flags, int mmu_hdl = 0, int mmu_hdl2 = 0, int count=1) {
+    video_fd = m->video0_fd;
     size = s;
     alignment = a;
-    void *p = alloc_w_mmu_hdl(m->video0_fd, ALIGNED_SIZE(size, alignment)*count, (uint32_t*)&handle, alignment, flags, mmu_hdl, mmu_hdl2);
+    mmap_size = aligned_size() * count;
+    void *p = alloc_w_mmu_hdl(video_fd, mmap_size, (uint32_t*)&handle, alignment, flags, mmu_hdl, mmu_hdl2);
     ptr = (unsigned char*)p;
     assert(ptr != NULL);
   };
@@ -84,13 +102,14 @@ public:
     return ALIGNED_SIZE(size, alignment);
   };
 
-  unsigned char *ptr;
-  int size, alignment, handle;
+  int video_fd = -1;
+  unsigned char *ptr = nullptr;
+  int size = 0, alignment = 0, handle = 0, mmap_size = 0;
 };
 
 class SpectraCamera {
 public:
-  SpectraCamera(SpectraMaster *master, const CameraConfig &config, bool raw);
+  SpectraCamera(SpectraMaster *master, const CameraConfig &config, SpectraOutputType out);
   ~SpectraCamera();
 
   void camera_open(VisionIpcServer *v, cl_device_id device_id, cl_context ctx);
@@ -114,6 +133,7 @@ public:
   void configICP();
   void configCSIPHY();
   void linkDevices();
+  void destroySyncObjectAt(int index);
 
   // *** state ***
 
@@ -163,7 +183,7 @@ public:
   uint64_t idx_offset = 0;
   bool skipped = true;
 
-  bool is_raw;
+  SpectraOutputType output_type;
 
   CameraBuf buf;
   MemoryManager mm;

@@ -1,12 +1,15 @@
+#pragma once
+
 #include "cdm.h"
 
-#include "system/camerad/cameras/tici.h"
+#include "system/camerad/cameras/hw.h"
 #include "system/camerad/sensors/sensor.h"
 
 
-int build_update(uint8_t *dst, const SensorInfo *s, std::vector<uint32_t> &patches) {
+int build_update(uint8_t *dst, const CameraConfig cam, const SensorInfo *s, std::vector<uint32_t> &patches) {
   uint8_t *start = dst;
 
+  // init sequence
   dst += write_random(dst, {
     0x2c, 0xffffffff,
     0x30, 0xffffffff,
@@ -15,6 +18,7 @@ int build_update(uint8_t *dst, const SensorInfo *s, std::vector<uint32_t> &patch
     0x3c, 0xffffffff,
   });
 
+  // demux cfg
   dst += write_cont(dst, 0x560, {
     0x00000001,
     0x04440444,
@@ -33,36 +37,29 @@ int build_update(uint8_t *dst, const SensorInfo *s, std::vector<uint32_t> &patch
     0x00000000,
   });
 
+  // module config/enables (e.g. enable debayer, white balance, etc.)
   dst += write_cont(dst, 0x40, {
-    0x00000c06, // (1<<8) to enable vignetting correction
+    0x00000c06 | ((uint32_t)(cam.vignetting_correction) << 8),
   });
-
-  dst += write_cont(dst, 0x48, {
-    (1 << 3) | (1 << 1),
-  });
-
-  dst += write_cont(dst, 0x4c, {
-    0x00000019,
-  });
-
-  dst += write_cont(dst, 0xe0c, {
-    0x00000e00,
-  });
-
-  dst += write_cont(dst, 0xe2c, {
-    0x00000e00,
-  });
-
   dst += write_cont(dst, 0x44, {
     0x00000000,
   });
-
-  dst += write_cont(dst, 0xaac, {
+  dst += write_cont(dst, 0x48, {
+    (1 << 3) | (1 << 1),
+  });
+  dst += write_cont(dst, 0x4c, {
+    0x00000019,
+  });
+  dst += write_cont(dst, 0xf00, {
     0x00000000,
   });
 
-  dst += write_cont(dst, 0xf00, {
-    0x00000000,
+  // cropping
+  dst += write_cont(dst, 0xe0c, {
+    0x00000e00,
+  });
+  dst += write_cont(dst, 0xe2c, {
+    0x00000e00,
   });
 
   // black level scale + offset
@@ -76,11 +73,11 @@ int build_update(uint8_t *dst, const SensorInfo *s, std::vector<uint32_t> &patch
 }
 
 
-int build_initial_config(uint8_t *dst, const SensorInfo *s, std::vector<uint32_t> &patches) {
+int build_initial_config(uint8_t *dst, const CameraConfig cam, const SensorInfo *s, std::vector<uint32_t> &patches) {
   uint8_t *start = dst;
 
   // start with the every frame config
-  dst += build_update(dst, s, patches);
+  dst += build_update(dst, cam, s, patches);
 
   uint64_t addr;
 
@@ -111,17 +108,8 @@ int build_initial_config(uint8_t *dst, const SensorInfo *s, std::vector<uint32_t
   dst += write_cont(dst, 0x500, s->linearization_pts);
   dst += write_cont(dst, 0x510, s->linearization_pts);
   // TODO: this is DMI64 in the dump, does that matter?
-  dst += write_dmi(dst, &addr, 288, 0xc24, 9);
+  dst += write_dmi(dst, &addr, s->linearization_lut.size()*sizeof(uint32_t), 0xc24, 9);
   patches.push_back(addr - (uint64_t)start);
-  /* TODO
-  cdm_dmi_cmd_t 248
-    .length = 287
-    .reserved = 33
-    .cmd = 11
-    .addr = 0
-    .DMIAddr = 3108
-    .DMISel = 9
-  */
 
   // vignetting correction
   dst += write_cont(dst, 0x6bc, {
@@ -129,17 +117,14 @@ int build_initial_config(uint8_t *dst, const SensorInfo *s, std::vector<uint32_t
     0x00670067,
     0xd3b1300c,
     0x13b1300c,
-    0x00670067,
-    0xd3b1300c,
-    0x13b1300c,
-    0xec4e4000,
-    0x0100c003,
+  });
+  dst += write_cont(dst, 0x6d8, {
     0xec4e4000,
     0x0100c003,
   });
-  dst += write_dmi(dst, &addr, 884, 0xc24, 14);
+  dst += write_dmi(dst, &addr, s->vignetting_lut.size()*sizeof(uint32_t), 0xc24, 14); // GRR
   patches.push_back(addr - (uint64_t)start);
-  dst += write_dmi(dst, &addr, 884, 0xc24, 15);
+  dst += write_dmi(dst, &addr, s->vignetting_lut.size()*sizeof(uint32_t), 0xc24, 15); // GBB
   patches.push_back(addr - (uint64_t)start);
 
   // debayer
@@ -158,11 +143,11 @@ int build_initial_config(uint8_t *dst, const SensorInfo *s, std::vector<uint32_t
   dst += write_cont(dst, 0x798, {
     0x00000000,
   });
-  dst += write_dmi(dst, &addr, 256, 0xc24, 26);  // G
+  dst += write_dmi(dst, &addr, s->gamma_lut_rgb.size()*sizeof(uint32_t), 0xc24, 26);  // G
   patches.push_back(addr - (uint64_t)start);
-  dst += write_dmi(dst, &addr, 256, 0xc24, 28);  // B
+  dst += write_dmi(dst, &addr, s->gamma_lut_rgb.size()*sizeof(uint32_t), 0xc24, 28);  // B
   patches.push_back(addr - (uint64_t)start);
-  dst += write_dmi(dst, &addr, 256, 0xc24, 30);  // R
+  dst += write_dmi(dst, &addr, s->gamma_lut_rgb.size()*sizeof(uint32_t), 0xc24, 30);  // R
   patches.push_back(addr - (uint64_t)start);
 
   // YUV
@@ -181,7 +166,7 @@ int build_initial_config(uint8_t *dst, const SensorInfo *s, std::vector<uint32_t
     0x03ff0000,
   });
 
-  // TODO: remove this
+  // output size/scaling
   dst += write_cont(dst, 0xa3c, {
     0x00000003,
     ((s->frame_width - 1) << 16) | (s->frame_width - 1),
