@@ -16,13 +16,20 @@ from openpilot.selfdrive.locationd.helpers import PoseCalibrator, Pose, fft_next
 BLOCK_SIZE = 100
 BLOCK_NUM = 50
 BLOCK_NUM_NEEDED = 5
-MOVING_WINDOW_SEC = 300.0
+MOVING_WINDOW_SEC = 60.0
 MIN_OKAY_WINDOW_SEC = 25.0
 MIN_RECOVERY_BUFFER_SEC = 2.0
 MIN_VEGO = 15.0
-MIN_ABS_YAW_RATE = np.radians(1.0)
+MIN_ABS_YAW_RATE = 0.0
+MAX_YAW_RATE_SANITY_CHECK = 1.0
 MIN_NCC = 0.95
 MAX_LAG = 1.0
+MAX_LAG_STD = 0.1
+MAX_LAT_ACCEL = 2.0
+MAX_LAT_ACCEL_DIFF = 0.6
+MIN_CONFIDENCE = 0.7
+CORR_BORDER_OFFSET = 5
+LAG_CANDIDATE_CORR_THRESHOLD = 0.9
 
 
 def masked_normalized_cross_correlation(expected_sig: np.ndarray, actual_sig: np.ndarray, mask: np.ndarray, n: int):
@@ -124,13 +131,23 @@ class BlockAverage:
       self.block_idx = (self.block_idx + 1) % self.num_blocks
       self.valid_blocks = min(self.valid_blocks + 1, self.num_blocks)
 
-  def get(self) -> tuple[float, float]:
+  def get(self) -> tuple[float, float, float, float]:
     valid_block_idx = [i for i in range(self.valid_blocks) if i != self.block_idx]
     valid_and_current_idx = valid_block_idx + ([self.block_idx] if self.idx > 0 else [])
 
-    valid_mean = float(np.mean(self.values[valid_block_idx], axis=0).item()) if len(valid_block_idx) > 0 else float('nan')
-    current_mean = float(np.mean(self.values[valid_and_current_idx], axis=0).item()) if len(valid_and_current_idx) > 0 else float('nan')
-    return valid_mean, current_mean
+    if len(valid_block_idx) > 0:
+      valid_mean = float(np.mean(self.values[valid_block_idx], axis=0).item())
+      valid_std = float(np.std(self.values[valid_block_idx], axis=0).item())
+    else:
+      valid_mean, valid_std = float('nan'), float('nan')
+
+    if len(valid_and_current_idx) > 0:
+      current_mean = float(np.mean(self.values[valid_and_current_idx], axis=0).item())
+      current_std = float(np.std(self.values[valid_and_current_idx], axis=0).item())
+    else:
+      current_mean, current_std = float('nan'), float('nan')
+
+    return valid_mean, valid_std, current_mean, current_std
 
 
 class LateralLagEstimator:
@@ -139,7 +156,8 @@ class LateralLagEstimator:
   def __init__(self, CP: car.CarParams, dt: float,
                block_count: int = BLOCK_NUM, min_valid_block_count: int = BLOCK_NUM_NEEDED, block_size: int = BLOCK_SIZE,
                window_sec: float = MOVING_WINDOW_SEC, okay_window_sec: float = MIN_OKAY_WINDOW_SEC, min_recovery_buffer_sec: float = MIN_RECOVERY_BUFFER_SEC,
-               min_vego: float = MIN_VEGO, min_yr: float = MIN_ABS_YAW_RATE, min_ncc: float = MIN_NCC):
+               min_vego: float = MIN_VEGO, min_yr: float = MIN_ABS_YAW_RATE, min_ncc: float = MIN_NCC,
+               max_lat_accel: float = MAX_LAT_ACCEL, max_lat_accel_diff: float = MAX_LAT_ACCEL_DIFF, min_confidence: float = MIN_CONFIDENCE):
     self.dt = dt
     self.window_sec = window_sec
     self.okay_window_sec = okay_window_sec
@@ -151,6 +169,9 @@ class LateralLagEstimator:
     self.min_vego = min_vego
     self.min_yr = min_yr
     self.min_ncc = min_ncc
+    self.min_confidence = min_confidence
+    self.max_lat_accel = max_lat_accel
+    self.max_lat_accel_diff = max_lat_accel_diff
 
     self.t = 0.0
     self.lat_active = False
@@ -159,10 +180,13 @@ class LateralLagEstimator:
     self.desired_curvature = 0.0
     self.v_ego = 0.0
     self.yaw_rate = 0.0
+    self.yaw_rate_std = 0.0
+    self.pose_valid = False
 
     self.last_lat_inactive_t = 0.0
     self.last_steering_pressed_t = 0.0
     self.last_steering_saturated_t = 0.0
+    self.last_pose_invalid_t = 0.0
     self.last_estimate_t = 0.0
 
     self.calibrator = PoseCalibrator()
@@ -181,17 +205,27 @@ class LateralLagEstimator:
 
     liveDelay = msg.liveDelay
 
-    valid_mean_lag, current_mean_lag = self.block_avg.get()
-    if self.block_avg.valid_blocks >= self.min_valid_block_count and not np.isnan(valid_mean_lag):
-      liveDelay.status = log.LiveDelayData.Status.estimated
-      liveDelay.lateralDelay = valid_mean_lag
+    valid_mean_lag, valid_std, current_mean_lag, current_std = self.block_avg.get()
+    if self.block_avg.valid_blocks >= self.min_valid_block_count and not np.isnan(valid_mean_lag) and not np.isnan(valid_std):
+      if valid_std > MAX_LAG_STD:
+        liveDelay.status = log.LiveDelayData.Status.invalid
+      else:
+        liveDelay.status = log.LiveDelayData.Status.estimated
     else:
       liveDelay.status = log.LiveDelayData.Status.unestimated
+
+    if liveDelay.status == log.LiveDelayData.Status.estimated:
+      liveDelay.lateralDelay = valid_mean_lag
+    else:
       liveDelay.lateralDelay = self.initial_lag
-    if not np.isnan(current_mean_lag):
+
+    if not np.isnan(current_mean_lag) and not np.isnan(current_std):
       liveDelay.lateralDelayEstimate = current_mean_lag
+      liveDelay.lateralDelayEstimateStd = current_std
     else:
       liveDelay.lateralDelayEstimate = self.initial_lag
+      liveDelay.lateralDelayEstimateStd = 0.0
+
     liveDelay.validBlocks = self.block_avg.valid_blocks
     if debug:
       liveDelay.points = self.block_avg.values.flatten().tolist()
@@ -212,7 +246,9 @@ class LateralLagEstimator:
     elif which == "livePose":
       device_pose = Pose.from_live_pose(msg)
       calibrated_pose = self.calibrator.build_calibrated_pose(device_pose)
-      self.yaw_rate = calibrated_pose.angular_velocity.z
+      self.yaw_rate = calibrated_pose.angular_velocity.yaw
+      self.yaw_rate_std = calibrated_pose.angular_velocity.yaw_std
+      self.pose_valid = msg.angularVelocityDevice.valid and msg.posenetOK and msg.inputsOK
     self.t = t
 
   def points_enough(self):
@@ -222,23 +258,30 @@ class LateralLagEstimator:
     return self.points.num_okay >= int(self.okay_window_sec / self.dt)
 
   def update_points(self):
+    la_desired = self.desired_curvature * self.v_ego * self.v_ego
+    la_actual_pose = self.yaw_rate * self.v_ego
+
+    fast = self.v_ego > self.min_vego
+    turning = np.abs(self.yaw_rate) >= self.min_yr
+    sensors_valid = self.pose_valid and np.abs(self.yaw_rate) < MAX_YAW_RATE_SANITY_CHECK and self.yaw_rate_std < MAX_YAW_RATE_SANITY_CHECK
+    la_valid = np.abs(la_actual_pose) <= self.max_lat_accel and np.abs(la_desired - la_actual_pose) <= self.max_lat_accel_diff
+    calib_valid = self.calibrator.calib_valid
+
     if not self.lat_active:
       self.last_lat_inactive_t = self.t
     if self.steering_pressed:
       self.last_steering_pressed_t = self.t
     if self.steering_saturated:
       self.last_steering_saturated_t = self.t
+    if not sensors_valid or not la_valid:
+      self.last_pose_invalid_t = self.t
 
-    la_desired = self.desired_curvature * self.v_ego * self.v_ego
-    la_actual_pose = self.yaw_rate * self.v_ego
-
-    fast = self.v_ego > self.min_vego
-    turning = np.abs(self.yaw_rate) >= self.min_yr
-    has_recovered = all( # wait for recovery after !lat_active, steering_pressed, steering_saturated
+    has_recovered = all( # wait for recovery after !lat_active, steering_pressed, steering_saturated, !sensors/la_valid
       self.t - last_t >= self.min_recovery_buffer_sec
-      for last_t in [self.last_lat_inactive_t, self.last_steering_pressed_t, self.last_steering_saturated_t]
+      for last_t in [self.last_lat_inactive_t, self.last_steering_pressed_t, self.last_steering_saturated_t, self.last_pose_invalid_t]
     )
-    okay = self.lat_active and not self.steering_pressed and not self.steering_saturated and fast and turning and has_recovered
+    okay = self.lat_active and not self.steering_pressed and not self.steering_saturated and \
+           fast and turning and has_recovered and calib_valid and sensors_valid and la_valid
 
     self.points.update(self.t, la_desired, la_actual_pose, okay)
 
@@ -253,14 +296,14 @@ class LateralLagEstimator:
       new_values_start_idx = next(-i for i, t in enumerate(reversed(times)) if t <= self.last_estimate_t)
       is_valid = is_valid and not (new_values_start_idx == 0 or not np.any(okay[new_values_start_idx:]))
 
-    delay, corr = self.actuator_delay(desired, actual, okay, self.dt, MAX_LAG)
-    if corr < self.min_ncc or not is_valid:
+    delay, corr, confidence = self.actuator_delay(desired, actual, okay, self.dt, MAX_LAG)
+    if corr < self.min_ncc or confidence < self.min_confidence or not is_valid:
       return
 
     self.block_avg.update(delay)
     self.last_estimate_t = self.t
 
-  def actuator_delay(self, expected_sig: np.ndarray, actual_sig: np.ndarray, mask: np.ndarray, dt: float, max_lag: float) -> tuple[float, float]:
+  def actuator_delay(self, expected_sig: np.ndarray, actual_sig: np.ndarray, mask: np.ndarray, dt: float, max_lag: float) -> tuple[float, float, float]:
     assert len(expected_sig) == len(actual_sig)
     max_lag_samples = int(max_lag / dt)
     padded_size = fft_next_good_size(len(expected_sig) + max_lag_samples)
@@ -268,18 +311,31 @@ class LateralLagEstimator:
     ncc = masked_normalized_cross_correlation(expected_sig, actual_sig, mask, padded_size)
 
     # only consider lags from 0 to max_lag
-    roi_ncc = ncc[len(expected_sig) - 1: len(expected_sig) - 1 + max_lag_samples]
+    roi = np.s_[len(expected_sig) - 1: len(expected_sig) - 1 + max_lag_samples]
+    extended_roi = np.s_[roi.start - CORR_BORDER_OFFSET: roi.stop + CORR_BORDER_OFFSET]
+    roi_ncc = ncc[roi]
+    extended_roi_ncc = ncc[extended_roi]
 
     max_corr_index = np.argmax(roi_ncc)
     corr = roi_ncc[max_corr_index]
     lag = parabolic_peak_interp(roi_ncc, max_corr_index) * dt
 
-    return lag, corr
+    # to estimate lag confidence, gather all high-correlation candidates and see how spread they are
+    # if e.g. 0.8 and 0.4 are both viable, this is an ambiguous case
+    ncc_thresh = (roi_ncc.max() - roi_ncc.min()) * LAG_CANDIDATE_CORR_THRESHOLD + roi_ncc.min()
+    good_lag_candidate_mask = extended_roi_ncc >= ncc_thresh
+    good_lag_candidate_edges = np.diff(good_lag_candidate_mask.astype(int), prepend=0, append=0)
+    starts, ends = np.where(good_lag_candidate_edges == 1)[0], np.where(good_lag_candidate_edges == -1)[0] - 1
+    run_idx = np.searchsorted(starts, max_corr_index + CORR_BORDER_OFFSET, side='right') - 1
+    width = ends[run_idx] - starts[run_idx] + 1
+    confidence = np.clip(1 - width * dt, 0, 1)
+
+    return lag, corr, confidence
 
 
-def retrieve_initial_lag(params_reader: Params, CP: car.CarParams):
-  last_lag_data = params_reader.get("LiveDelay")
-  last_carparams_data = params_reader.get("CarParamsPrevRoute")
+def retrieve_initial_lag(params: Params, CP: car.CarParams):
+  last_lag_data = params.get("LiveDelay")
+  last_carparams_data = params.get("CarParamsPrevRoute")
 
   if last_lag_data is not None:
     try:
@@ -288,11 +344,13 @@ def retrieve_initial_lag(params_reader: Params, CP: car.CarParams):
         if last_CP.carFingerprint != CP.carFingerprint:
           raise Exception("Car model mismatch")
 
-        lag, valid_blocks = ld.lateralDelayEstimate, ld.validBlocks
+        lag, valid_blocks, status = ld.lateralDelayEstimate, ld.validBlocks, ld.status
         assert valid_blocks <= BLOCK_NUM, "Invalid number of valid blocks"
+        assert status != log.LiveDelayData.Status.invalid, "Lag estimate is invalid"
         return lag, valid_blocks
     except Exception as e:
       cloudlog.error(f"Failed to retrieve initial lag: {e}")
+      params.remove("LiveDelay")
 
   return None
 
@@ -305,11 +363,11 @@ def main():
   pm = messaging.PubMaster(['liveDelay'])
   sm = messaging.SubMaster(['livePose', 'liveCalibration', 'carState', 'controlsState', 'carControl'], poll='livePose')
 
-  params_reader = Params()
-  CP = messaging.log_from_bytes(params_reader.get("CarParams", block=True), car.CarParams)
+  params = Params()
+  CP = messaging.log_from_bytes(params.get("CarParams", block=True), car.CarParams)
 
   lag_learner = LateralLagEstimator(CP, 1. / SERVICE_LIST['livePose'].frequency)
-  if (initial_lag_params := retrieve_initial_lag(params_reader, CP)) is not None:
+  if (initial_lag_params := retrieve_initial_lag(params, CP)) is not None:
     lag, valid_blocks = initial_lag_params
     lag_learner.reset(lag, valid_blocks)
 
@@ -330,4 +388,4 @@ def main():
       pm.send('liveDelay', lag_msg_dat)
 
       if sm.frame % 1200 == 0: # cache every 60 seconds
-        params_reader.put_nonblocking("LiveDelay", lag_msg_dat)
+        params.put_nonblocking("LiveDelay", lag_msg_dat)
