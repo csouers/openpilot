@@ -1,6 +1,11 @@
-import pyray as rl
+from collections.abc import Callable
 from enum import IntEnum
-from openpilot.system.ui.lib.application import gui_app, FontWeight
+
+import pyray as rl
+
+from openpilot.system.ui.lib.application import gui_app, FontWeight, MousePos
+from openpilot.system.ui.lib.text_measure import measure_text_cached
+from openpilot.system.ui.widgets import Widget
 
 
 class ButtonStyle(IntEnum):
@@ -9,6 +14,7 @@ class ButtonStyle(IntEnum):
   DANGER = 2  # For critical actions, like reboot or delete
   TRANSPARENT = 3  # For buttons with transparent background and border
   ACTION = 4
+  LIST_ACTION = 5  # For list items with action buttons
 
 
 class TextAlignment(IntEnum):
@@ -19,11 +25,17 @@ class TextAlignment(IntEnum):
 
 ICON_PADDING = 15
 DEFAULT_BUTTON_FONT_SIZE = 60
-BUTTON_ENABLED_TEXT_COLOR = rl.Color(228, 228, 228, 255)
 BUTTON_DISABLED_TEXT_COLOR = rl.Color(228, 228, 228, 51)
 ACTION_BUTTON_FONT_SIZE = 48
-ACTION_BUTTON_TEXT_COLOR = rl.Color(0, 0, 0, 255)
 
+BUTTON_TEXT_COLOR = {
+  ButtonStyle.NORMAL: rl.Color(228, 228, 228, 255),
+  ButtonStyle.PRIMARY: rl.Color(228, 228, 228, 255),
+  ButtonStyle.DANGER: rl.Color(228, 228, 228, 255),
+  ButtonStyle.TRANSPARENT: rl.BLACK,
+  ButtonStyle.ACTION: rl.Color(0, 0, 0, 255),
+  ButtonStyle.LIST_ACTION: rl.Color(228, 228, 228, 255),
+}
 
 BUTTON_BACKGROUND_COLORS = {
   ButtonStyle.NORMAL: rl.Color(51, 51, 51, 255),
@@ -31,6 +43,7 @@ BUTTON_BACKGROUND_COLORS = {
   ButtonStyle.DANGER: rl.Color(255, 36, 36, 255),
   ButtonStyle.TRANSPARENT: rl.BLACK,
   ButtonStyle.ACTION: rl.Color(189, 189, 189, 255),
+  ButtonStyle.LIST_ACTION: rl.Color(57, 57, 57, 255),
 }
 
 BUTTON_PRESSED_BACKGROUND_COLORS = {
@@ -39,10 +52,13 @@ BUTTON_PRESSED_BACKGROUND_COLORS = {
   ButtonStyle.DANGER: rl.Color(255, 36, 36, 255),
   ButtonStyle.TRANSPARENT: rl.BLACK,
   ButtonStyle.ACTION: rl.Color(130, 130, 130, 255),
+  ButtonStyle.LIST_ACTION: rl.Color(74, 74, 74, 74),
 }
 
 _pressed_buttons: set[str] = set()  # Track mouse press state globally
 
+
+# TODO: This should be a Widget class
 
 def gui_button(
   rect: rl.Rectangle,
@@ -99,7 +115,7 @@ def gui_button(
 
   # Handle icon and text positioning
   font = gui_app.font(font_weight)
-  text_size = rl.measure_text_ex(font, text, font_size, 0)
+  text_size = measure_text_cached(font, text, font_size)
   text_pos = rl.Vector2(0, rect.y + (rect.height - text_size.y) // 2)  # Vertical centering
 
   # Draw icon if provided
@@ -132,7 +148,48 @@ def gui_button(
 
   # Draw the button text if any
   if text:
-    text_color = ACTION_BUTTON_TEXT_COLOR if button_style == ButtonStyle.ACTION else BUTTON_ENABLED_TEXT_COLOR if is_enabled else BUTTON_DISABLED_TEXT_COLOR
-    rl.draw_text_ex(font, text, text_pos, font_size, 0, text_color)
+    color = BUTTON_TEXT_COLOR[button_style] if is_enabled else BUTTON_DISABLED_TEXT_COLOR
+    rl.draw_text_ex(font, text, text_pos, font_size, 0, color)
 
   return result
+
+
+class Button(Widget):
+  def __init__(self,
+               text: str,
+               click_callback: Callable[[], None] = None,
+               font_size: int = DEFAULT_BUTTON_FONT_SIZE,
+               font_weight: FontWeight = FontWeight.MEDIUM,
+               button_style: ButtonStyle = ButtonStyle.NORMAL,
+               border_radius: int = 10,
+               ):
+
+    super().__init__()
+    self._text = text
+    self._click_callback = click_callback
+    self._label_font = gui_app.font(FontWeight.SEMI_BOLD)
+    self._button_style = button_style
+    self._font_size = font_size
+    self._border_radius = border_radius
+    self._font_size = font_size
+    self._text_color = BUTTON_TEXT_COLOR[button_style]
+    self._text_size = measure_text_cached(gui_app.font(font_weight), text, font_size)
+
+  def _handle_mouse_release(self, mouse_pos: MousePos):
+    if self._click_callback:
+      print(f"Button clicked: {self._text}")
+      self._click_callback()
+
+  def _get_background_color(self) -> rl.Color:
+    if self._is_pressed:
+      return BUTTON_PRESSED_BACKGROUND_COLORS[self._button_style]
+    else:
+      return BUTTON_BACKGROUND_COLORS[self._button_style]
+
+  def _render(self, _):
+    roundness = self._border_radius / (min(self._rect.width, self._rect.height) / 2)
+    rl.draw_rectangle_rounded(self._rect, roundness, 10, self._get_background_color())
+
+    text_pos = rl.Vector2(0, self._rect.y + (self._rect.height - self._text_size.y) // 2)
+    text_pos.x = self._rect.x + (self._rect.width - self._text_size.x) // 2
+    rl.draw_text_ex(self._label_font, self._text, text_pos, self._font_size, 0, self._text_color)
