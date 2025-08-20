@@ -23,26 +23,27 @@ def main():
     should_send_bookmark = False
 
     # TODO: https://github.com/commaai/openpilot/issues/36015
-    if False and sm.updated['carState'] and sm['carState'].canValid:
-      for be in sm['carState'].buttonEvents:
-        if be.type == ButtonType.lkas:
-          if be.pressed:
-            if not should_record_audio:
-              if params.get_bool("RecordAudioFeedback"):  # Start recording on first press if toggle set
-                should_record_audio = True
-                block_num = 0
-                waiting_for_release = False
-                early_stop_triggered = False
-                cloudlog.info("LKAS button pressed - starting 10-second audio feedback")
-              else:
-                should_send_bookmark = True  # immediately send bookmark if toggle false
-                cloudlog.info("LKAS button pressed - bookmarking")
-            elif should_record_audio and not waiting_for_release:  # Wait for release of second press to stop recording early
-              waiting_for_release = True
-          elif waiting_for_release:  # Second press released
-            waiting_for_release = False
-            early_stop_triggered = True
-            cloudlog.info("LKAS button released - ending recording early")
+    # Souers: Disable this. I use LKAS button to trigger chill and e2e long
+    # if False and sm.updated['carState'] and sm['carState'].canValid:
+    #   for be in sm['carState'].buttonEvents:
+    #     if be.type == ButtonType.lkas:
+    #       if be.pressed:
+    #         if not should_record_audio:
+    #           if params.get_bool("RecordAudioFeedback"):  # Start recording on first press if toggle set
+    #             should_record_audio = True
+    #             block_num = 0
+    #             waiting_for_release = False
+    #             early_stop_triggered = False
+    #             cloudlog.info("LKAS button pressed - starting 10-second audio feedback")
+    #           else:
+    #             should_send_bookmark = True  # immediately send bookmark if toggle false
+    #             cloudlog.info("LKAS button pressed - bookmarking")
+    #         elif should_record_audio and not waiting_for_release:  # Wait for release of second press to stop recording early
+    #           waiting_for_release = True
+    #       elif waiting_for_release:  # Second press released
+    #         waiting_for_release = False
+    #         early_stop_triggered = True
+    #         cloudlog.info("LKAS button released - ending recording early")
 
     if should_record_audio and sm.updated['rawAudioData']:
       raw_audio = sm['rawAudioData']
