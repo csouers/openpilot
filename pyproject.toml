@@ -16,10 +16,8 @@ dependencies = [
   "sympy",        # rednose + friends
   "crcmod",       # cars + qcomgpsd
   "tqdm",         # cars (fw_versions.py) on start + many one-off uses
-
   # hardwared
   "smbus2", # configuring amp
-
   # core
   "cffi",
   "scons",
@@ -27,7 +25,6 @@ dependencies = [
   "Cython",
   "setuptools",
   "numpy >=2.0",
-
   # body / webrtcd
   "aiohttp",
   "aiortc",
@@ -35,41 +32,33 @@ dependencies = [
   # with the latest release
   "pyopenssl < 24.3.0",
   "pyaudio",
-
   # panda
   "libusb1",
   "spidev; platform_system == 'Linux'",
-
   # modeld
   "onnx >= 1.14.0",
-
   # logging
   "pyzmq",
   "sentry-sdk",
   "xattr", # used in place of 'os.getxattr' for macos compatibility
-
   # athena
   "PyJWT",
   "json-rpc",
   "websocket_client",
-
   # acados deps
   "casadi >=3.6.6",  # 3.12 fixed in 3.6.6
   "future-fstrings",
-
   # joystickd
   "inputs",
-
   # these should be removed
   "psutil",
   "pycryptodome", # used in updated/casync, panda, body, and a test
   "setproctitle",
-
   # logreader
   "zstandard",
-
   # ui
   "qrcode",
+  "pandas>=2.3.3",
 ]
 
 [project.optional-dependencies]
@@ -119,7 +108,7 @@ dev = [
 ]
 
 tools = [
-  "metadrive-simulator @ https://github.com/commaai/metadrive/releases/download/MetaDrive-minimal-0.4.2.4/metadrive_simulator-0.4.2.4-py3-none-any.whl ; (platform_machine != 'aarch64')",
+#  "metadrive-simulator @ https://github.com/commaai/metadrive/releases/download/MetaDrive-minimal-0.4.2.4/metadrive_simulator-0.4.2.4-py3-none-any.whl ; (platform_machine != 'aarch64')",
 ]
 
 [project.urls]
@@ -232,6 +221,7 @@ lint.ignore = [
   "NPY002",  # new numpy random syntax is worse
   "UP038",   # (x, y) -> x|y for isinstance
 ]
+lint.flake8-implicit-str-concat.allow-multiline = false
 line-length = 160
 target-version ="py311"
 exclude = [
@@ -247,7 +237,6 @@ exclude = [
   "third_party",
   "*.ipynb",
 ]
-lint.flake8-implicit-str-concat.allow-multiline = false
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "selfdrive".msg = "Use openpilot.selfdrive"

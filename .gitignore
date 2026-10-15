@@ -102,3 +102,6 @@ Pipfile
 # Ignore all local history of files
 .history
 .ionide
+
+### Pi agent ###
+.pi/
