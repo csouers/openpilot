@@ -12,6 +12,7 @@ from openpilot.tools.lib.logreader import LogIterable, LogReader
 RED = '\033[91m'
 CLEAR = '\033[0m'
 
+
 def update(msgs, bus, dat, low_to_high, high_to_low, minaddr, quiet=False, dbc=None):
   for x in msgs:
     if x.which() != 'can':
@@ -92,12 +93,12 @@ def can_printer(bus=0, min_addr=0, init_msgs=None, new_msgs=None, table=False, d
   if table:
     print(tables)
 
+
 if __name__ == "__main__":
   desc = """Collects messages and prints when a new bit transition is observed.
   This is very useful to find signals based on user triggered actions, such as blinkers and seatbelt.
   Leave the script running until no new transitions are seen, then perform the action."""
-  parser = argparse.ArgumentParser(description=desc,
-                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+  parser = argparse.ArgumentParser(description=desc, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument("--bus", type=int, help="CAN bus to print out", default=0)
   parser.add_argument("--dbc", type=str, help="DBC file to load", default=None)
   parser.add_argument("--table", action="store_true", help="Print a cabana-like table")
