@@ -63,6 +63,8 @@ class Plant:
     control = messaging.new_message('controlsState')
     ss = messaging.new_message('selfdriveState')
     car_state = messaging.new_message('carState')
+    lp = messaging.new_message('vehicleParameters')
+    car_control = messaging.new_message('carControl')
     model = messaging.new_message('modelV2')
     a_lead = (v_lead - self.v_lead_prev)/self.ts
     self.v_lead_prev = v_lead
@@ -123,8 +125,10 @@ class Plant:
     # ******** get controlsState messages for plotting ***
     sm = {'radarState': radar.radarState,
           'carState': car_state.carState,
+          'carControl': car_control.carControl,
           'controlsState': control.controlsState,
           'selfdriveState': ss.selfdriveState,
+          'vehicleParameters': lp.vehicleParameters,
           'modelV2': model.modelV2}
     self.planner.update(sm)
     self.acceleration = self.planner.output_a_target
