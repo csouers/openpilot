@@ -466,7 +466,7 @@ class SelfdriveD:
 
       elif any(not be.pressed and be.type == ButtonType.lkas for be in CS.buttonEvents):
         self.experimental_mode = not self.experimental_mode
-        self.params.put_bool_nonblocking("ExperimentalMode", self.experimental_mode)
+        self.params.put_bool("ExperimentalMode", self.experimental_mode)
 
   def data_sample(self):
     _car_state = messaging.recv_one(self.car_state_sock)
