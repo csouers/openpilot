@@ -19,6 +19,7 @@ class UIConfig:
   set_speed_width_metric: int = 200
   set_speed_width_imperial: int = 172
   set_speed_height: int = 204
+  experimental_icon_size: int = 55
 
 
 @dataclass(frozen=True)
@@ -65,6 +66,8 @@ class HudRenderer(Widget):
     self._font_semi_bold: rl.Font = gui_app.font(FontWeight.SEMI_BOLD)
     self._font_bold: rl.Font = gui_app.font(FontWeight.BOLD)
     self._font_medium: rl.Font = gui_app.font(FontWeight.MEDIUM)
+    self._experimental_icon = gui_app.texture("icons/experimental_white.png", UI_CONFIG.experimental_icon_size, UI_CONFIG.experimental_icon_size)
+    self._experimental_mode = False
 
   def _update_state(self) -> None:
     """Update HUD state based on car state and controls state."""
@@ -74,6 +77,9 @@ class HudRenderer(Widget):
       self.set_speed = SET_SPEED_NA
       self.speed = 0.0
       return
+
+    if sm.recv_frame['selfdriveState'] >= ui_state.started_frame:
+      self._experimental_mode = bool(sm['selfdriveState'].experimentalMode)
 
     controls_state = sm['controlsState']
     car_state = sm['carState']
@@ -110,6 +116,15 @@ class HudRenderer(Widget):
       self._draw_set_speed(rect)
 
     self._draw_current_speed(rect)
+    if self._experimental_mode:
+      self._draw_experimental_icon(rect)
+
+  def _draw_experimental_icon(self, rect: rl.Rectangle) -> None:
+    """Draw the experimental mode icon in the top-right corner."""
+    size = UI_CONFIG.experimental_icon_size
+    x = rect.x + rect.width - size - 45
+    y = rect.y + 40
+    rl.draw_texture_v(self._experimental_icon, rl.Vector2(x, y), rl.WHITE)
 
   def _draw_set_speed(self, rect: rl.Rectangle) -> None:
     """Draw the MAX speed indicator box."""
