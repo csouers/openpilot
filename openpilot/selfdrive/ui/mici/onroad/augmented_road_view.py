@@ -243,7 +243,7 @@ class AugmentedRoadView(CameraView):
     self._model_renderer.render(self._content_rect)
 
     # Fade out bottom of overlays for looks
-    rl.draw_texture_ex(self._fade_texture, rl.Vector2(self._content_rect.x, self._content_rect.y), 0.0, 1.0, rl.WHITE)
+    # rl.draw_texture_ex(self._fade_texture, rl.Vector2(self._content_rect.x, self._content_rect.y), 0.0, 1.0, rl.WHITE)
 
     # Hide DMoji when disengaged unless AlwaysOnDM is enabled
     should_draw_dmoji = (not self._hud_renderer.drawing_top_icons() and
