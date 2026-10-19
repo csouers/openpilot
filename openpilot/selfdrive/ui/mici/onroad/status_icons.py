@@ -5,9 +5,6 @@ from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.widgets import Widget
 
-
-INACTIVE_COLOR = rl.Color(86, 86, 86, 255)
-
 # Vertical space the status icon occupies at the top of the rail
 STATUS_ICONS_HEIGHT = 100
 
@@ -32,6 +29,9 @@ class StatusIconColumn(Widget):
     rl.draw_texture_ex(texture, pos, 0.0, 1.0, tint)
 
   def _render(self, _):
+    if not self._experimental_mode:
+      return
+
     panel = rl.Rectangle(
       self.rect.x + self.rect.width - SIDE_PANEL_WIDTH,
       self.rect.y,
@@ -41,5 +41,4 @@ class StatusIconColumn(Widget):
     center_x = panel.x + panel.width / 2
     center = rl.Vector2(center_x, panel.y + STATUS_ICONS_HEIGHT / 2)
 
-    experimental_tint = rl.WHITE if self._experimental_mode else INACTIVE_COLOR
-    self._draw_texture_centered(self._experimental_texture, center, experimental_tint)
+    self._draw_texture_centered(self._experimental_texture, center, rl.WHITE)
