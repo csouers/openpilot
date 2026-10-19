@@ -50,8 +50,10 @@ class ConfidenceBall(Widget):
     )
 
     status_dot_radius = 24
-    dot_height = (1 - self._confidence_filter.x) * (content_rect.height - 2 * status_dot_radius) + status_dot_radius
-    dot_height = self._rect.y + dot_height
+    # Icons occupy the top of the rail; the ball slides in the space below them.
+    rail_top = self._rect.y + STATUS_ICONS_HEIGHT
+    rail_bottom = self._rect.y + content_rect.height - status_dot_radius
+    dot_height = (1 - self._confidence_filter.x) * (rail_bottom - rail_top) + rail_top
 
     # confidence zones
     if ui_state.status == UIStatus.ENGAGED or self._demo:
