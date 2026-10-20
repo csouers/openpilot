@@ -61,7 +61,14 @@ def navigation(started: bool, params: Params, CP: car.CarParams) -> bool:
 def steering_nav(started: bool, params: Params, CP: car.CarParams) -> bool:
   # Dev source for the aapi cluster: wheel angle -> navInstruction -> OPNAV on CAN.
   # Must be off while NavigationEnabled is on, or navd would be a second publisher.
-  return started and params.get_bool("SteeringNavEnabled") and not params.get_bool("NavigationEnabled")
+  # Guarded: a param key that isn't in params_keys.h must disable this, not crash the
+  # manager (an UnknownKeyName here takes the whole manager down).
+  if not started:
+    return False
+  try:
+    return params.get_bool("SteeringNavEnabled") and not params.get_bool("NavigationEnabled")
+  except Exception:
+    return False
 
 def only_offroad(started: bool, params: Params, CP: car.CarParams) -> bool:
   return not started
