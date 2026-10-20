@@ -23,10 +23,13 @@ import argparse
 import sys
 import time
 
-# AGNOS boxes exist in both openpilot layouts (flat stock tree and the nested tree).
-for extra in ("/data/openpilot_stock", "/data/openpilot",
-              "/data/openpilot/opendbc_repo", "/data/openpilot/msgq_repo",
-              "/data/safe_staging/merged"):
+# The nested tree must win: /data/openpilot_stock, when present, is a FLAT layout and
+# its top-level `openpilot` package shadows the real one, so appending it breaks
+# `openpilot.selfdrive.navcan`.
+for extra in ("/data/openpilot/msgq_repo", "/data/openpilot/opendbc_repo", "/data/openpilot"):
+  if extra not in sys.path:
+    sys.path.insert(0, extra)
+for extra in ("/data/openpilot_stock", "/data/safe_staging/merged"):
   if extra not in sys.path:
     sys.path.append(extra)
 
@@ -65,6 +68,10 @@ def main() -> int:
   p.add_argument("--threshold-deg", type=float, default=8.0)
   p.add_argument("--hysteresis-deg", type=float, default=4.0)
   p.add_argument("--reassert-s", type=float, default=10.0)
+  p.add_argument("--slight-deg", type=float, default=35.0)
+  p.add_argument("--sharp-deg", type=float, default=120.0)
+  p.add_argument("--uturn-deg", type=float, default=170.0)
+  p.add_argument("--uturn-max-speed", type=float, default=4.0)
   p.add_argument("--distance-m", type=float, default=DISTANCE_M)
   p.add_argument("--dry-run", action="store_true", help="print, publish nothing")
   p.add_argument("--once", action="store_true", help="one carState sample, then exit")
@@ -90,7 +97,11 @@ def main() -> int:
       continue
     angle = float(sm["carState"].steeringAngleDeg)
 
-    want = classify(angle, args.threshold_deg, args.hysteresis_deg)
+    v_ego = float(sm["carState"].vEgo)
+    want = classify(angle, args.threshold_deg, args.hysteresis_deg,
+                    slight_deg=args.slight_deg, sharp_deg=args.sharp_deg,
+                    uturn_deg=args.uturn_deg, v_ego=v_ego,
+                    uturn_max_speed=args.uturn_max_speed, prev=state)
     if want and want != state:
       state = want
       last_sent = 0.0

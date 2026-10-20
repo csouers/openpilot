@@ -2,33 +2,70 @@
 
 Kept separate from the CAN encoder so it is testable and so tools/nav/steering_nav.py
 and any in-process user share one definition.
+
+Angle sign follows openpilot's ISO 8855 convention: positive is a LEFT turn.
+
+Severity comes from the wheel angle and is deliberately heuristic — it is a dev source,
+not a navigation system:
+    |angle| < hold                 -> STRAIGHT
+    hold .. slight                 -> slight left/right
+    slight .. sharp                -> left/right (normal)
+    sharp .. uturn                 -> sharp left/right
+    >= uturn, and slow             -> uturn left/right
+The speed gate on the U-turn matters: at parking speed the wheel sits far past 170 deg
+for an ordinary turn, so angle alone would call every parking manoeuvre a U-turn.
 """
 from __future__ import annotations
 
 LEFT, RIGHT, STRAIGHT = "LEFT", "RIGHT", "STRAIGHT"
 
+# maneuver strings use the Modifier vocabulary Mapbox/AA already speak
+SEVERITY = ("slight", "", "sharp", "uturn")
 
-def classify(angle: float, threshold: float, hysteresis: float) -> str:
-  """Return 'LEFT', 'RIGHT', 'STRAIGHT', or '' to keep the previous state.
 
-  Empty means "inside the hysteresis band": the caller holds whatever it had, which is
-  what keeps the arrow from flickering at the threshold.
+def _severity(a: float, prev_level: int, edges: tuple[float, float, float],
+              hysteresis: float) -> int:
+  level = sum(a >= e for e in edges)
+  if prev_level > level:
+    # only drop a band after falling hysteresis below the edge we came from
+    edge = edges[prev_level - 1]
+    if a >= edge - hysteresis:
+      level = prev_level
+  return level
+
+
+def classify(angle: float, threshold: float, hysteresis: float,
+             slight_deg: float = 35.0, sharp_deg: float = 120.0,
+             uturn_deg: float = 170.0, v_ego: float = 0.0,
+             uturn_max_speed: float = 4.0, prev: str = "") -> str:
+  """Return '', 'straight left', 'straight', 'slight left', 'left', ....
+
+  '' means "inside the hold band": the caller keeps whatever it had.
   """
-  if angle >= threshold:
-    return RIGHT
-  if angle <= -threshold:
-    return LEFT
-  if abs(angle) <= threshold - hysteresis:
-    return STRAIGHT
+  a = abs(angle)
+  if a >= threshold:
+    side = "left" if angle > 0 else "right"
+    prev_side = prev.rsplit(maxsplit=1)[-1] if prev and prev != STRAIGHT.lower() else ""
+    prev_level = 0
+    if prev_side == side:
+      words = prev.split()
+      prev_level = SEVERITY.index(words[0]) if words[0] in SEVERITY else 1
+    level = _severity(a, prev_level, (slight_deg, sharp_deg, uturn_deg), hysteresis)
+    if level == 3 and v_ego > uturn_max_speed:
+      level = 2  # fast + big angle is a sharp turn, not a U-turn
+    word = SEVERITY[level]
+    return f"{word} {side}".strip()
+  if a <= threshold - hysteresis:
+    return "straight"
   return ""
 
 
 def instruction(state: str, angle: float, distance_m: float = 50.0) -> dict:
   """navInstruction fields for a steering-derived state."""
-  if state == STRAIGHT:
+  if state == "straight":
     mtype, modifier = "continue", "straight"
   else:
-    mtype, modifier = "turn", state.lower()
+    mtype, modifier = "turn", state
   return {
     "maneuverType": mtype,
     "maneuverModifier": modifier,
@@ -47,14 +84,22 @@ def run_self_test() -> int:
       ok = False
 
   t, h = 8.0, 4.0
-  check("right", classify(9, t, h) == RIGHT)
-  check("left", classify(-9, t, h) == LEFT)
-  check("straight", classify(0, t, h) == STRAIGHT)
-  check("hold right band", classify(6, t, h) == "")
-  check("hold left band", classify(-6, t, h) == "")
-  check("leave band", classify(3, t, h) == STRAIGHT)
-  check("turn fields", instruction(RIGHT, 9)["maneuverModifier"] == "right")
-  check("straight fields", instruction(STRAIGHT, 0)["maneuverType"] == "continue")
+  # sign: ISO 8855 positive = left
+  check("left", classify(9, t, h) == "slight left")
+  check("right", classify(-9, t, h) == "slight right")
+  check("straight", classify(0, t, h) == "straight")
+  check("hold band", classify(6, t, h) == "")
+  check("leave band", classify(3, t, h) == "straight")
+  check("slight", classify(20, t, h) == "slight left")
+  check("normal", classify(60, t, h) == "left")
+  check("sharp", classify(140, t, h) == "sharp left")
+  check("uturn slow", classify(200, t, h, v_ego=1.0) == "uturn left")
+  check("uturn only when slow", classify(200, t, h, v_ego=10.0) == "sharp left")
+  check("severity hysteresis", classify(118, t, h, prev="sharp left") == "sharp left")
+  check("severity clears", classify(110, t, h, prev="sharp left") == "left")
+  check("straight fields", instruction("straight", 0)["maneuverType"] == "continue")
+  check("slight fields", instruction("slight right", -20)["maneuverModifier"] == "slight right")
+  check("uturn fields", instruction("uturn left", 200)["maneuverModifier"] == "uturn left")
   print("steering self-test:", "ok" if ok else "FAILED")
   return 0 if ok else 1
 
