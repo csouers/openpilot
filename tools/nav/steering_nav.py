@@ -67,7 +67,7 @@ def main() -> int:
   p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
   p.add_argument("--threshold-deg", type=float, default=8.0)
   p.add_argument("--hysteresis-deg", type=float, default=4.0)
-  p.add_argument("--reassert-s", type=float, default=10.0)
+  p.add_argument("--reassert-s", type=float, default=0.5)
   p.add_argument("--slight-deg", type=float, default=35.0)
   p.add_argument("--sharp-deg", type=float, default=120.0)
   p.add_argument("--uturn-deg", type=float, default=170.0)

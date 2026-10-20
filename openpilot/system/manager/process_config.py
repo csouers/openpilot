@@ -58,6 +58,11 @@ def only_onroad(started: bool, params: Params, CP: car.CarParams) -> bool:
 def navigation(started: bool, params: Params, CP: car.CarParams) -> bool:
   return started and params.get_bool("NavigationEnabled")
 
+def steering_nav(started: bool, params: Params, CP: car.CarParams) -> bool:
+  # Dev source for the aapi cluster: wheel angle -> navInstruction -> OPNAV on CAN.
+  # Must be off while NavigationEnabled is on, or navd would be a second publisher.
+  return started and params.get_bool("SteeringNavEnabled") and not params.get_bool("NavigationEnabled")
+
 def only_offroad(started: bool, params: Params, CP: car.CarParams) -> bool:
   return not started
 
@@ -88,6 +93,7 @@ procs = [
   PythonProcess("modeld", "openpilot.selfdrive.modeld.modeld", only_onroad),
   PythonProcess("navd", "openpilot.selfdrive.navigation.navd", navigation),
   PythonProcess("mapsd", "openpilot.selfdrive.navigation.mapsd", navigation),
+  PythonProcess("steering_nav", "tools.nav.steering_nav", steering_nav),
   PythonProcess("dmonitoringmodeld", "openpilot.selfdrive.modeld.dmonitoringmodeld", driverview, enabled=(WEBCAM or not PC)),
 
   PythonProcess("sensord", "openpilot.system.sensord.sensord", only_onroad, enabled=not PC),
