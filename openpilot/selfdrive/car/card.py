@@ -19,6 +19,7 @@ from opendbc.car.fw_versions import ObdCallback
 from opendbc.car.car_helpers import get_car, interfaces
 from opendbc.car.interfaces import CarInterfaceBase, RadarInterfaceBase
 from openpilot.selfdrive.pandad import can_capnp_to_list, can_list_to_can_capnp
+from openpilot.selfdrive.navcan.navcan import NavCan
 from openpilot.selfdrive.car.cruise import VCruiseHelper
 
 REPLAY = "REPLAY" in os.environ
@@ -65,7 +66,7 @@ class Car:
 
   def __init__(self, CI=None, RI=None) -> None:
     self.can_sock = messaging.sub_sock('can', timeout=20)
-    self.sm = messaging.SubMaster(['pandaStates', 'carControl', 'onroadEvents'])
+    self.sm = messaging.SubMaster(['pandaStates', 'carControl', 'onroadEvents', 'navInstruction'])
     self.pm = messaging.PubMaster(['sendcan', 'carState', 'carParams', 'carOutput', 'radarTracks'])
 
     self.can_rcv_cum_timeout_counter = 0
@@ -109,6 +110,9 @@ class Car:
       self.RI = RI
 
     self.CP.alternativeExperience = 0
+
+    # Honda only, and only on cars whose DBC has a body bus. False = disabled.
+    self.navcan = NavCan(self.CP)
     openpilot_enabled_toggle = self.params.get_bool("OpenpilotEnabledToggle")
     controller_available = self.CI.CC is not None and openpilot_enabled_toggle and not self.CP.dashcamOnly
     self.CP.passive = not controller_available or self.CP.dashcamOnly
@@ -231,13 +235,22 @@ class Car:
       # signal pandad to switch to car safety mode
       self.params.put_bool("ControlsReady", True)
 
-    if self.sm.all_alive(['carControl']):
+    can_sends = []
+    controls_alive = self.sm.all_alive(['carControl'])
+    if controls_alive:
       # send car controls over can
       now_nanos = self.can_log_mono_time if REPLAY else int(time.monotonic() * 1e9)
       self.last_actuators_output, can_sends = self.CI.apply(CC, now_nanos)
-      self.pm.send('sendcan', can_list_to_can_capnp(can_sends, msgtype='sendcan', valid=CS.canValid))
-
       self.CC_prev = CC
+
+    # Nav instructions ride the same sendcan publish so there is exactly one publisher.
+    # They go out even before the control loop is alive: the cluster should show guidance
+    # regardless of whether openpilot is engaged.
+    if self.navcan:
+      can_sends += self.navcan.update(self.sm['navInstruction'], self.sm.frame)
+
+    if controls_alive or can_sends:
+      self.pm.send('sendcan', can_list_to_can_capnp(can_sends, msgtype='sendcan', valid=CS.canValid))
 
   def step(self):
     CS, RD = self.state_update()
