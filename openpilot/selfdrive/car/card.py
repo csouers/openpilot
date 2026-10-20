@@ -246,8 +246,9 @@ class Car:
     # Nav instructions ride the same sendcan publish so there is exactly one publisher.
     # They go out even before the control loop is alive: the cluster should show guidance
     # regardless of whether openpilot is engaged.
-    if self.navcan:
-      can_sends += self.navcan.update(self.sm['navInstruction'], self.sm.frame)
+    if self.navcan and self.sm.seen['navInstruction']:
+      can_sends += self.navcan.update(self.sm['navInstruction'], self.sm.frame,
+                                     self.sm.valid['navInstruction'])
 
     if controls_alive or can_sends:
       self.pm.send('sendcan', can_list_to_can_capnp(can_sends, msgtype='sendcan', valid=CS.canValid))

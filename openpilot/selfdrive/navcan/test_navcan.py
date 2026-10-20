@@ -23,14 +23,14 @@ class NavCanTest(unittest.TestCase):
     self.n = N.NavCan(stub_cp())
     self.assertTrue(self.n)
 
-  def frames(self, instruction=None, frames=1):
+  def frames(self, instruction=None, frames=1, valid=True):
     out = []
     for i in range(frames):
-      out += self.n.update(instruction or ins(), i)
+      out += self.n.update(instruction or ins(), i, valid)
     return out
 
-  def status_frames(self, instruction=None, frames=20):
-    return [f for f in self.frames(instruction, frames) if f.address == N.OPNAV_STATUS]
+  def status_frames(self, instruction=None, frames=20, valid=True):
+    return [f for f in self.frames(instruction, frames, valid) if f.address == N.OPNAV_STATUS]
 
   def test_bus_and_packer(self):
     self.assertEqual(self.n.bus, 0)  # Bus.body == CAN 0 for Honda Bosch
@@ -57,6 +57,19 @@ class NavCanTest(unittest.TestCase):
     # drift apart without one of them failing.
     self.assertEqual(b.hex(), "0015042000fa001e")
 
+  def test_valid_is_not_read_from_the_struct(self):
+    # SubMaster returns the nested navInstruction struct, which has no `valid` field;
+    # validity lives on the enclosing Event and is passed separately. Mirrors the real
+    # crash: AttributeError: struct has no such member; name = valid.
+    class Struct:
+      maneuverType = "turn"
+      maneuverModifier = "left"
+      maneuverDistance = 10.0
+      maneuverPrimaryText = ""
+
+    got = self.status_frames(Struct(), frames=3, valid=True)
+    self.assertEqual(got[0].address, N.OPNAV_STATUS)
+
   def test_status_cadence(self):
     got = self.frames(frames=N.STATUS_PERIOD)
     statuses = [f for f in got if f.address == N.OPNAV_STATUS]
@@ -65,7 +78,7 @@ class NavCanTest(unittest.TestCase):
     self.assertIn(N.OPNAV_STATUS, [f.address for f in got])
 
   def test_invalid_clears(self):
-    f = self.status_frames(ins(valid=False))[0]
+    f = self.status_frames(ins(), valid=False)[0]
     self.assertEqual(f.dat[1] & 0xF, 0)
     self.assertEqual(f.dat[2], N.UNKNOWN)
 

@@ -132,8 +132,8 @@ class NavCan:
     return hasattr(self, "bus")
 
   # -- encoding -------------------------------------------------------------
-  def _status_values(self, ins) -> dict:
-    valid = bool(ins.valid)
+  def _status_values(self, ins, valid: bool) -> dict:
+    valid = bool(valid)
     arrived = valid and aa_event(ins.maneuverType, ins.maneuverModifier) == DESTINATION
     flags = (FLAG_VALID if valid else 0) | (FLAG_ARRIVED if arrived else 0) | (FLAG_ROUTE_ACTIVE if valid else 0)
     dist = 0 if arrived else _clamp_u16(ins.maneuverDistance)
@@ -166,13 +166,15 @@ class NavCan:
     self.text_frames = frames
 
   # -- per-frame update -----------------------------------------------------
-  def update(self, ins, frame: int) -> list[CanData]:
+  def update(self, ins, frame: int, valid: bool = True) -> list[CanData]:
+    # `valid` is on the enclosing Event, not on the navInstruction struct that
+    # SubMaster returns, so the caller has to pass sm.valid['navInstruction'].
     if not self:
       return []
 
     # A road/instruction change is only worth announcing once, but repeat it once so a
     # single dropped chunk frame cannot leave a half-name on the cluster.
-    text = ins.maneuverPrimaryText if ins.valid else ""
+    text = ins.maneuverPrimaryText if valid else ""
     if text != self.last_text:
       self.last_text = text
       self._queue_text(text)
@@ -192,7 +194,7 @@ class NavCan:
 
     if frame - self.last_status_frame >= STATUS_PERIOD:
       self.last_status_frame = frame
-      msg = self._msg("OPNAV_Status", self._status_values(ins))
+      msg = self._msg("OPNAV_Status", self._status_values(ins, valid))
       self.counter = (self.counter + 1) % 256
       return [msg]
 
