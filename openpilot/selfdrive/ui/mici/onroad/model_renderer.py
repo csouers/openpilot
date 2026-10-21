@@ -17,7 +17,7 @@ from openpilot.system.ui.widgets import Widget
 CLIP_MARGIN = 500
 MIN_DRAW_DISTANCE = 10.0
 MAX_DRAW_DISTANCE = 100.0
-LEAD_BAR_LENGTH = 12.0  # px
+LEAD_BAR_LENGTH = 24.0  # px
 LEAD_BAR_WIDTH = 1.8  # m
 
 STOCK_PATH_GRADIENT = Gradient(

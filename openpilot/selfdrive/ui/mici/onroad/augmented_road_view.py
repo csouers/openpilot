@@ -180,6 +180,8 @@ class AugmentedRoadView(CameraView):
     # self._driver_state_renderer = DriverStateRenderer()
     self._status_icons = StatusIconColumn()
     self._confidence_ball = ConfidenceBall()
+    self._bsm_left_slide = FirstOrderFilter(0.0, 0.1, 1 / gui_app.target_fps)
+    self._bsm_right_slide = FirstOrderFilter(0.0, 0.1, 1 / gui_app.target_fps)
     self._offroad_label = UnifiedLabel("start the car to\nuse openpilot", 54, FontWeight.DISPLAY,
                                        text_color=rl.Color(255, 255, 255, int(255 * 0.9)),
                                        alignment=TextAlignment.CENTER,
@@ -265,6 +267,26 @@ class AugmentedRoadView(CameraView):
                                                alert_to_render.visual_alert == car.CarControl.HUDControl.VisualAlert.steerRequired)
     self._alert_renderer.render(self._content_rect)
     self._hud_renderer.render(self._content_rect)
+
+    # Show blind-spot alerts on the corresponding screen edge.
+    sm = ui_state.sm
+    bsm_valid = sm.valid['carState'] and sm.recv_frame['carState'] >= ui_state.started_frame
+    cs = sm['carState']
+    left_slide = self._bsm_left_slide.update(float(bsm_valid and cs.leftBlindspot))
+    right_slide = self._bsm_right_slide.update(float(bsm_valid and cs.rightBlindspot))
+    if left_slide > 0.001 or right_slide > 0.001:
+      bsm_color = rl.Color(255, 165, 0, 255)
+      indicator_width = 18
+      indicator_height = self._content_rect.height * 0.4
+      indicator_y = self._content_rect.y + (self._content_rect.height - indicator_height) / 2
+      if left_slide > 0.001:
+        indicator_x = self._content_rect.x + 8 - (indicator_width + 8) * (1 - left_slide)
+        rl.draw_rectangle_rounded(rl.Rectangle(indicator_x, indicator_y,
+                                                indicator_width, indicator_height), 1.0, 10, bsm_color)
+      if right_slide > 0.001:
+        indicator_x = self._content_rect.x + self._content_rect.width - indicator_width - 8 + (indicator_width + 8) * (1 - right_slide)
+        rl.draw_rectangle_rounded(rl.Rectangle(indicator_x,
+                                                indicator_y, indicator_width, indicator_height), 1.0, 10, bsm_color)
 
     # Draw fake rounded border
     rl.draw_rectangle_rounded_lines_ex(self._content_rect, 0.2 * 1.02, 10, 50, rl.BLACK)

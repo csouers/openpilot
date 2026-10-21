@@ -14,7 +14,8 @@ from openpilot.system.ui.widgets import Widget
 from openpilot.common.filter_simple import FirstOrderFilter
 
 # TODO: arc_bar_pts doesn't consider rounded end caps part of the angle span
-TORQUE_ANGLE_SPAN = 12.7  # degrees on the default 476 px camera view; narrower views beside the navigation panel scale down
+TORQUE_SCALE = 1.5
+TORQUE_ANGLE_SPAN = 12.7 * TORQUE_SCALE  # degrees on the default 476 px camera view
 
 DEBUG = False
 
@@ -189,8 +190,8 @@ class TorqueBar(Widget):
 
   def _render(self, rect: rl.Rectangle) -> None:
     # adjust y pos with torque
-    torque_line_offset = np.interp(abs(self._torque_filter.x), [0.5, 1], [22, 26])
-    torque_line_height = np.interp(abs(self._torque_filter.x), [0.5, 1], [14, 56])
+    torque_line_offset = np.interp(abs(self._torque_filter.x), [0.5, 1], [22, 26]) * TORQUE_SCALE
+    torque_line_height = np.interp(abs(self._torque_filter.x), [0.5, 1], [14, 56]) * TORQUE_SCALE
 
     # animate alpha and angle span
     if not self._demo:
@@ -262,5 +263,5 @@ class TorqueBar(Widget):
     # draw center torque bar dot
     if abs(self._torque_filter.x) < 0.5:
       dot_y = self._rect.y + self._rect.height - torque_line_offset - torque_line_height / 2
-      rl.draw_circle(int(cx), int(dot_y), 10 // 2,
+      rl.draw_circle(int(cx), int(dot_y), 5 * TORQUE_SCALE,
                      rl.Color(182, 182, 182, int(255 * 0.9 * self._torque_line_alpha_filter.x)))

@@ -182,8 +182,7 @@ class HudRenderer(Widget):
 
     self._torque_bar.render(rect)
 
-    if self.is_cruise_set:
-      self._draw_set_speed(rect)
+    self._draw_set_speed(rect)
 
     self._draw_model_source(rect)
 
@@ -261,12 +260,12 @@ class HudRenderer(Widget):
     """Draw the MAX speed indicator box."""
     # alpha = self._set_speed_alpha_filter.update(0 < rl.get_time() - self._set_speed_changed_time < SET_SPEED_PERSISTENCE and
     #                                             self._can_draw_top_icons and self._engaged)
-    alpha = self._set_speed_alpha_filter.update(1.0)
+    alpha = self._set_speed_alpha_filter.update(float(self._can_draw_top_icons))
     if alpha < 1e-2:
       return
 
     x = rect.x
-    y = rect.y
+    y = rect.y - (1.0 - alpha) * (FONT_SIZES.set_speed + FONT_SIZES.max_speed)
 
     # draw drop shadow
     circle_radius = 162 // 2
@@ -291,10 +290,12 @@ class HudRenderer(Widget):
     )
 
     max_text = tr("MAX")
+    set_speed_width = measure_text_cached(self._font_display, set_speed_text, FONT_SIZES.set_speed).x
+    max_width = measure_text_cached(self._font_semi_bold, max_text, FONT_SIZES.max_speed).x
     rl.draw_text_ex(
       self._font_semi_bold,
       max_text,
-      rl.Vector2(x + 25, y + FONT_SIZES.set_speed - 7 + 4),
+      rl.Vector2(x + 17 + (set_speed_width - max_width) / 2, y + FONT_SIZES.set_speed - 7 + 4),
       FONT_SIZES.max_speed,
       0,
       max_color,
