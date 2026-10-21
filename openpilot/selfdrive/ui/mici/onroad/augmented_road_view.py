@@ -5,7 +5,7 @@ from opendbc.car.structs import car
 from openpilot.cereal.visionipc import VisionStreamType
 from openpilot.selfdrive.ui.ui_state import ui_state
 # from openpilot.selfdrive.ui.ui_state import UIStatus
-from openpilot.selfdrive.ui.mici.onroad import SIDE_PANEL_WIDTH
+# from openpilot.selfdrive.ui.mici.onroad import SIDE_PANEL_WIDTH
 from openpilot.selfdrive.ui.mici.onroad.alert_renderer import AlertRenderer
 # from openpilot.selfdrive.ui.mici.onroad.driver_state import DriverStateRenderer
 from openpilot.selfdrive.ui.mici.onroad.hud_renderer import HudRenderer
@@ -226,7 +226,7 @@ class AugmentedRoadView(CameraView):
     self._content_rect = rl.Rectangle(
       self.rect.x,
       self.rect.y,
-      self.rect.width - (PANEL_WIDTH if show_navigation else SIDE_PANEL_WIDTH),
+      self.rect.width - (PANEL_WIDTH if show_navigation else 0),
       self.rect.height,
     )
 
@@ -278,7 +278,7 @@ class AugmentedRoadView(CameraView):
       self._navigation.render(rl.Rectangle(self._content_rect.x + self._content_rect.width, self.rect.y, PANEL_WIDTH, self.rect.height))
     else:
       self._status_icons.render(self.rect)
-      self._confidence_ball.render(self.rect)
+      # self._confidence_ball.render(self.rect)
 
     self._bookmark_icon.render(self.rect)
 
