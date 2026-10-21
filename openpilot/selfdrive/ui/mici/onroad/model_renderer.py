@@ -162,17 +162,19 @@ class ModelRenderer(Widget):
     if leads[0][0] and abs(leads[1][1] - leads[0][1]) < 3.0:
       leads[1] = (False, 0.0, 0.0)
 
-    ss, cs = sm['selfdriveState'], sm['carState']
+    # ss, cs = sm['selfdriveState'], sm['carState']
     # braking disengages without making openpilot unavailable
-    available = ss.enabled or ss.engageable or cs.brakePressed
+    # available = ss.enabled or ss.engageable or cs.brakePressed
+    available = True
     lane = self._path.raw_points
-    opacity = 0.4 if ui_state.status == UIStatus.DISENGAGED else 0.8
+    # opacity = 0.4 if ui_state.status == UIStatus.DISENGAGED else 0.8
     for lead, (present, d_rel, y_rel) in zip(self._lead_vehicles, leads, strict=True):
       visible = available and present and d_rel < MAX_DRAW_DISTANCE and len(lane) > 0
       # snap to a new vehicle instead of sliding over
       if not visible or abs(y_rel - lead.y_filter.x) > 3.0:
         lead.d_filter.initialized = lead.y_filter.initialized = False
-      lead.fade_filter.update(opacity if visible else 0.0)
+      # No translucency or fade: detected leads are always solid white.
+      lead.fade_filter.x = 1.0 if visible else 0.0
       if visible:
         lead.bar = self._get_lead_bar(lane, lead.d_filter.update(d_rel), lead.y_filter.update(y_rel))
 
@@ -279,8 +281,8 @@ class ModelRenderer(Widget):
     else:
       color = rl.Color(255, 255, 255, int(alpha * 255))
 
-    if ui_state.status == UIStatus.DISENGAGED:
-      color = rl.Color(0, 0, 0, int(alpha * 255))
+    # if ui_state.status == UIStatus.DISENGAGED:
+    #   color = rl.Color(0, 0, 0, int(alpha * 255))
 
     return color
 
@@ -309,9 +311,9 @@ class ModelRenderer(Widget):
 
     path_pts = self._path.projected_points + np.array([self._rect.x, self._rect.y], dtype=np.float32)
 
-    if ui_state.status == UIStatus.DISENGAGED:
-      draw_polygon(self._rect, path_pts, rl.Color(0, 0, 0, 90))
-    elif not self._longitudinal_control:
+    # if ui_state.status == UIStatus.DISENGAGED:
+    #   draw_polygon(self._rect, path_pts, rl.Color(0, 0, 0, 90))
+    if not self._longitudinal_control:
       draw_polygon(self._rect, path_pts, gradient=STOCK_PATH_GRADIENT)
     elif len(self._path_gradient.colors) > 1:
       draw_polygon(self._rect, path_pts, gradient=self._path_gradient)
