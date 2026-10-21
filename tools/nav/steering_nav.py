@@ -113,7 +113,6 @@ def main() -> int:
         print("DRY", state, fields, flush=True)
       else:
         publish(pm, fields)
-        print("sent", state, f"angle={angle:+.1f}", flush=True)
       last_sent = now
 
     if args.once:
