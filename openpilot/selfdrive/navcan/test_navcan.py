@@ -57,6 +57,21 @@ class NavCanTest(unittest.TestCase):
     # drift apart without one of them failing.
     self.assertEqual(b.hex(), "0015042000fa001e")
 
+  def test_invalid_frames_emit_nothing(self):
+    # A dead producer leaves sm.seen true and the last struct in place; emitting a status would
+    # re-stamp TTL_DS forever and the cluster would keep a stale arrow. Silence lets the aapi
+    # TTL expire the instruction.
+    self.assertEqual(self.frames(ins(), frames=20, valid=False), [])
+
+  def test_invalid_frame_keeps_text(self):
+    # An invalid event must not clear the held text: a zero-length TextCtl would blank the
+    # road name on the cluster between two good instructions.
+    self.frames(ins(text="Main St"), frames=30)
+    before = self.n.last_text
+    self.frames(ins(text="Main St"), frames=10, valid=False)
+    self.assertEqual(self.n.last_text, before)
+    self.assertEqual(self.n.last_text, "Main St")
+
   def test_valid_is_not_read_from_the_struct(self):
     # SubMaster returns the nested navInstruction struct, which has no `valid` field;
     # validity lives on the enclosing Event and is passed separately. Mirrors the real
@@ -76,11 +91,6 @@ class NavCanTest(unittest.TestCase):
     self.assertEqual(len(statuses), 1)  # frame 0 only, next at 50
     got = self.n.update(ins(), N.STATUS_PERIOD + 2)
     self.assertIn(N.OPNAV_STATUS, [f.address for f in got])
-
-  def test_invalid_clears(self):
-    f = self.status_frames(ins(), valid=False)[0]
-    self.assertEqual(f.dat[1] & 0xF, 0)
-    self.assertEqual(f.dat[2], N.UNKNOWN)
 
   def test_arrived(self):
     f = self.status_frames(ins(mtype="arrive", mod="", dist=12.0))[0]

@@ -172,9 +172,20 @@ class NavCan:
     if not self:
       return []
 
+    # `sm.seen` stays true forever once a source has published, and SubMaster keeps returning
+    # the last struct, so a dead producer would otherwise have us re-stamping TTL_DS at 2 Hz
+    # indefinitely: the aapi never expires the instruction and the cluster keeps a stale arrow.
+    # No fresh event means no frames; the aapi's 3 s TTL is what ends the instruction.
+    if not valid:
+      return []
+
     # A road/instruction change is only worth announcing once, but repeat it once so a
     # single dropped chunk frame cannot leave a half-name on the cluster.
-    text = ins.maneuverPrimaryText if valid else ""
+    # Only a valid event may change the text. An invalid/stale frame must not clear it:
+    # the source publishes at 1-2 Hz while this runs at 100 Hz, so validity flickers, and
+    # a cleared road is a zero-chunk TextCtl that blanks the name (and the arrow) on the
+    # cluster between two perfectly good instructions. The status TTL ends an instruction.
+    text = ins.maneuverPrimaryText if valid else self.last_text
     if text != self.last_text:
       self.last_text = text
       self._queue_text(text)
