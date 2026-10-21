@@ -65,12 +65,12 @@ def messaging_new(name: str):
 
 def main() -> int:
   p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-  p.add_argument("--threshold-deg", type=float, default=8.0)
-  p.add_argument("--hysteresis-deg", type=float, default=4.0)
+  p.add_argument("--threshold-deg", type=float, default=20.0)
+  p.add_argument("--hysteresis-deg", type=float, default=6.0)
   p.add_argument("--reassert-s", type=float, default=0.5)
-  p.add_argument("--slight-deg", type=float, default=35.0)
-  p.add_argument("--sharp-deg", type=float, default=120.0)
-  p.add_argument("--uturn-deg", type=float, default=170.0)
+  p.add_argument("--slight-deg", type=float, default=60.0)
+  p.add_argument("--sharp-deg", type=float, default=180.0)
+  p.add_argument("--uturn-deg", type=float, default=360.0)
   p.add_argument("--uturn-max-speed", type=float, default=4.0)
   p.add_argument("--distance-m", type=float, default=DISTANCE_M)
   p.add_argument("--dry-run", action="store_true", help="print, publish nothing")

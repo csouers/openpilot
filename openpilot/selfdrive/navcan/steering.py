@@ -12,6 +12,9 @@ not a navigation system:
     slight .. sharp                -> left/right (normal)
     sharp .. uturn                 -> sharp left/right
     >= uturn, and slow             -> uturn left/right
+Bands are steering-wheel degrees (tuned 2026-10-21 on the car: the old 8/35/120/170
+fired a band early at every step, so a small correction already drew a turn arrow).
+Current bands: 20 / 60 / 180 / 360 (U-turn also requires vEgo <= 4 m/s).
 The speed gate on the U-turn matters: at parking speed the wheel sits far past 170 deg
 for an ordinary turn, so angle alone would call every parking manoeuvre a U-turn.
 """
@@ -35,8 +38,8 @@ def _severity(a: float, prev_level: int, edges: tuple[float, float, float],
 
 
 def classify(angle: float, threshold: float, hysteresis: float,
-             slight_deg: float = 35.0, sharp_deg: float = 120.0,
-             uturn_deg: float = 170.0, v_ego: float = 0.0,
+             slight_deg: float = 60.0, sharp_deg: float = 180.0,
+             uturn_deg: float = 360.0, v_ego: float = 0.0,
              uturn_max_speed: float = 4.0, prev: str = "") -> str:
   """Return '', 'straight left', 'straight', 'slight left', 'left', ....
 
@@ -83,20 +86,20 @@ def run_self_test() -> int:
       print(f"[fail] {name}")
       ok = False
 
-  t, h = 8.0, 4.0
+  t, h = 20.0, 6.0
   # sign: ISO 8855 positive = left
-  check("left", classify(9, t, h) == "slight left")
-  check("right", classify(-9, t, h) == "slight right")
+  check("left", classify(25, t, h) == "slight left")
+  check("right", classify(-25, t, h) == "slight right")
   check("straight", classify(0, t, h) == "straight")
-  check("hold band", classify(6, t, h) == "")
-  check("leave band", classify(3, t, h) == "straight")
-  check("slight", classify(20, t, h) == "slight left")
-  check("normal", classify(60, t, h) == "left")
-  check("sharp", classify(140, t, h) == "sharp left")
-  check("uturn slow", classify(200, t, h, v_ego=1.0) == "uturn left")
-  check("uturn only when slow", classify(200, t, h, v_ego=10.0) == "sharp left")
-  check("severity hysteresis", classify(118, t, h, prev="sharp left") == "sharp left")
-  check("severity clears", classify(110, t, h, prev="sharp left") == "left")
+  check("hold band", classify(17, t, h) == "")
+  check("leave band", classify(13, t, h) == "straight")
+  check("slight", classify(30, t, h) == "slight left")
+  check("normal", classify(100, t, h) == "left")
+  check("sharp", classify(250, t, h) == "sharp left")
+  check("uturn slow", classify(380, t, h, v_ego=1.0) == "uturn left")
+  check("uturn only when slow", classify(380, t, h, v_ego=10.0) == "sharp left")
+  check("severity hysteresis", classify(178, t, h, prev="sharp left") == "sharp left")
+  check("severity clears", classify(172, t, h, prev="sharp left") == "left")
   check("straight fields", instruction("straight", 0)["maneuverType"] == "continue")
   check("slight fields", instruction("slight right", -20)["maneuverModifier"] == "slight right")
   check("uturn fields", instruction("uturn left", 200)["maneuverModifier"] == "uturn left")
