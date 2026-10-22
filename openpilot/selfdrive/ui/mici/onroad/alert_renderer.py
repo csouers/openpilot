@@ -335,18 +335,18 @@ class AlertRenderer(Widget):
       last_line_h = self._alert_text1_label.rect.y + self._alert_text1_label.get_content_height(int(alert_layout.text_rect.width))
       last_line_h -= 4
       if len(alert_text2) > 24:
-        small_font_size = 32
-      elif len(alert_text2) > 18:
-        small_font_size = 36
-      else:
         small_font_size = 40
+      elif len(alert_text2) > 18:
+        small_font_size = 44
+      else:
+        small_font_size = 48
       text_rect2 = rl.Rectangle(
         alert_layout.text_rect.x,
         last_line_h,
         alert_layout.text_rect.width,
         alert_layout.text_rect.height - last_line_h
       )
-      color = rl.Color(255, 255, 255, int(255 * 0.65 * self._alpha_filter.x))
+      color = rl.Color(255, 255, 255, int(255 * 0.85 * self._alpha_filter.x))
 
       self._alert_text2_label.set_text(alert_text2)
       self._alert_text2_label.set_text_color(color)
