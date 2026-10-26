@@ -241,10 +241,18 @@ class AugmentedRoadView(CameraView):
       int(self._content_rect.height)
     )
 
-    # Render the UI on black instead of the camera feed.
+    # Render the UI on black instead of the camera feed, but keep the stream
+    # machinery alive so the wide/narrow speed gate still drives the model
+    # path projection (super()._render is what normally runs this).
     # super()._render(self._content_rect)
     rl.draw_rectangle_rec(self._content_rect, rl.BLACK)
-    # Camera rendering normally updates the model projection; keep it updated without drawing video.
+    if self._ensure_connection():
+      if self._switching:
+        self._handle_switch()
+      buffer = self.client.recv(timeout_ms=0)
+      if buffer:
+        self.frame = buffer
+        self._texture_needs_update = True
     self._calc_frame_matrix(self._content_rect)
 
     # Draw all UI overlays
@@ -309,17 +317,17 @@ class AugmentedRoadView(CameraView):
     super().close()
 
   def _switch_stream_if_needed(self, sm):
-    # if sm['carParams'].openpilotLongitudinalControl and WIDE_CAM in self.available_streams:
-    #   v_ego = sm['carState'].vEgo
-    #   if v_ego < WIDE_CAM_MAX_SPEED:
-    #     target = WIDE_CAM
-    #   elif v_ego > ROAD_CAM_MIN_SPEED:
-    #     target = NARROW_ROAD_CAM
-    #   else:
-    #     # Hysteresis zone - keep current stream
-    #     target = self.stream_type
-    # else:
-    target = NARROW_ROAD_CAM
+    if sm['carParams'].openpilotLongitudinalControl and WIDE_CAM in self.available_streams:
+      v_ego = sm['carState'].vEgo
+      if v_ego < WIDE_CAM_MAX_SPEED:
+        target = WIDE_CAM
+      elif v_ego > ROAD_CAM_MIN_SPEED:
+        target = NARROW_ROAD_CAM
+      else:
+        # Hysteresis zone - keep current stream
+        target = self.stream_type
+    else:
+      target = NARROW_ROAD_CAM
 
     if self.stream_type != target:
       self.switch_stream(target)
