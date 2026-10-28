@@ -39,7 +39,7 @@ from openpilot.selfdrive.controls.lib.drive_helpers import get_accel_from_plan, 
 from openpilot.selfdrive.modeld.parse_model_outputs import Parser
 from openpilot.selfdrive.modeld.fill_model_msg import fill_model_msg, fill_driving_model_data, fill_pose_msg, PublishState
 from openpilot.selfdrive.modeld.constants import ModelConstants, Plan
-from openpilot.selfdrive.modeld.helpers import MODELS_DIR, chestnut_present, chestnut_compiled, modeld_pkl_path, load_oob, wait_for_chestnut
+from openpilot.selfdrive.modeld.helpers import MODELS_DIR, chestnut_expected, chestnut_present, chestnut_compiled, modeld_pkl_path, load_oob, wait_for_chestnut
 
 SEND_RAW_PRED = os.getenv('SEND_RAW_PRED')
 
@@ -231,13 +231,19 @@ class ModelState:
 def main(demo=False):
   cloudlog.warning("modeld init")
 
-  CHESTNUT = chestnut_compiled() and (chestnut_present() or cable_connected())
+  params = Params()
+  params.remove("ChestnutActive")
+  # only a chestnut that already enumerated holds the loading flag: a bare cable in the USB-C port
+  # must not show up as a GPU that is loading (that also blocks engagement with a Big Model Loading
+  # no-entry alert for as long as the probe waits)
+  params.put_bool("ChestnutLoading", chestnut_compiled() and chestnut_present())
+  CHESTNUT = chestnut_expected()
+  params.put_bool("ChestnutLoading", CHESTNUT)
+  if not CHESTNUT and cable_connected() and chestnut_compiled():
+    cloudlog.warning("USB-C cable connected but no chestnut enumerated, using the small model")
   if CHESTNUT:
     from tinygrad.runtime.ops_amd import AMDDevice
     AMDDevice.wait_timeout_ms = 3000
-  params = Params()
-  params.put_bool("ChestnutLoading", CHESTNUT)
-  params.remove("ChestnutActive")
 
   gc.disable()
 

@@ -19,9 +19,43 @@ openpilot/tools/joystick/joystick_control.py --keyboard
 
 The available buttons and axes will print showing their key mappings. In general, the WASD keys control gas and brakes and steering torque in 5% increments.
 
-### Joystick on your comma three
+### Controller mapping
 
-Plug the joystick into your comma three aux USB-C port. Then, SSH into the device and start `joystick_control.py`.
+Defaults target an Xbox-style controller (an `Xbox 360 pad` clone is what's in the car), read as raw evdev axes:
+
+| Control | evdev axis | maps to |
+|---|---|---|
+| left stick, left/right | `ABS_X` (-32768..32767) | steering (left = positive torque) |
+| RT | `ABS_RZ` (0..255) | accelerate (`+`) |
+| LT | `ABS_Z` (0..255) | brake (`-`) |
+| Y (`BTN_NORTH`) | - | cancel cruise control |
+
+`accel = expo(RT) - expo(LT)`, `steer = expo(left stick X, inverted)`, both with a 3% deadzone and the
+same `EXPO` curve as before (`testJoystick.axes = [accel, steer]`, consumed by `joystickd`).
+To use other axes, edit `steer_axis` / `gas_axis` / `brake_axis` / `cancel_button` in `Joystick.__init__`;
+`invert_map` flips a sign (e.g. if the wheel turns the wrong way).
+
+Two behaviours worth knowing:
+
+- **Deadman (`--deadman`, default 3 s)**: a controller that stops reporting (switched off, power save,
+  wedged USB) leaves the kernel's last axis values in place, which would pin the last steer/accel command
+  forever. After 3 s without any event the axes are released to 0 and `no controller input ... releasing
+  axes` is printed; the next event restores them. A deliberately held stick emits no events either, so a
+  long steady hold gets released too — raise the timeout (e.g. `--deadman 10`) or pass `--deadman 0`.
+- **Offroad start**: joystick mode replaces `controlsd`, so the tool only starts once openpilot is offroad.
+  It now waits for the offroad transition instead of exiting, so a copy started by the manager (which
+  spawns it as soon as `JoystickDebugMode` is set) comes up by itself.
+
+### Joystick on your comma device
+
+Plug the controller into the comma device's aux USB-C port. Then, SSH into the device and start `joystick_control.py`.
+Best to run it detached (`tmux`/`setsid`) or let the manager own it: a copy started from an interactive ssh
+shell dies with the ssh session when the device loses Wi-Fi.
+
+Note on mici: a controller in the USB-C port sets the Type-C CC orientation, which used to make `modeld`
+take the chestnut (big model) path and selfdrived soft-disable engagement 3 s after engage — i.e. joystick
+mode was unusable. `chestnut_expected()` now requires a real chestnut enumeration, so an accessory in the
+port is fine.
 
 ### Joystick on your laptop
 

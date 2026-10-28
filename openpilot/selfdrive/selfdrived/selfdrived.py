@@ -169,7 +169,9 @@ class SelfdriveD:
     big_active = self.params.get("ChestnutActive")
     chestnut_present = self.sm['deviceState'].chestnutPresent
     model_unavailable = big_active is True and self.sm.seen['modelV2'] and not self.sm.alive['modelV2']
-    big_failed = big_active is False or model_unavailable or (self.big_model_active and not chestnut_present)
+    # only a big model that failed with a chestnut attached is a failure. A cable (or any
+    # accessory) in the USB-C port must not soft-disable engagement, that broke joystick debug mode
+    big_failed = (big_active is False and chestnut_present) or model_unavailable or (self.big_model_active and not chestnut_present)
     if big_failed and not self.big_model_failed:
       self.events.add(EventName.bigModelFailed)
       self.big_model_ready_t = time.monotonic()

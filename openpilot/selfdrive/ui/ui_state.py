@@ -12,7 +12,7 @@ from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.ui.lib.prime_state import PrimeState
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.common.hardware import HARDWARE, PC
-from openpilot.common.hardware.usb import cable_connected, get_usb_state, is_chestnut_usb_id
+from openpilot.common.hardware.usb import CHESTNUT_ENUMERATION_GRACE, cable_connected, get_usb_state, is_chestnut_usb_id
 from openpilot.selfdrive.modeld.helpers import chestnut_compiled
 from openpilot.selfdrive.selfdrived.alertmanager import OFFROAD_ALERTS
 
@@ -207,7 +207,7 @@ class UIState:
         self.status = UIStatus.DISENGAGED
         self.started_frame = self.sm.frame
         self.started_time = time.monotonic()
-        self.chestnut_present = self.sm["deviceState"].chestnutPresent or (self.chestnut_compiled and self.usb_connected)
+        self.chestnut_present = self.sm["deviceState"].chestnutPresent or (self.chestnut_compiled and self.usb_connected and not self.usb_unknown)
 
       for callback in self._offroad_transition_callbacks:
         callback()
@@ -264,7 +264,7 @@ class UIState:
         self.usb_connected = True
         self.usb_connected_ts = now
         self.usb_unknown = False
-      elif self.usb_connected_ts is not None and now - self.usb_connected_ts > 10.:
+      elif self.usb_connected_ts is not None and now - self.usb_connected_ts > CHESTNUT_ENUMERATION_GRACE:
         self.usb_unknown = not any(is_chestnut_usb_id(d["vendorId"], d["productId"], True) for d in get_usb_state())
         self.usb_connected_ts = None
     elif self.usb_connected:

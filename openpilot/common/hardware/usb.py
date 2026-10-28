@@ -7,7 +7,12 @@ CHESTNUT_ROM_USB_IDS = ((0x174C, 0x2464), (0x174C, 0x2463))
 CHESTNUT_USB_PRODUCT = f"custom {CHESTNUT_FW_VERSION}-CLEAN"
 USB_DEVICES_PATH = Path("/sys/bus/usb/devices")
 TYPEC_CC_ORIENTATION_PATH = Path("/sys/class/power_supply/usb/typec_cc_orientation")
+TYPEC_MODE_PATH = Path("/sys/class/power_supply/usb/typec_mode")
+TYPEC_MODE_UNATTACHED = "Nothing attached"
 PRIMARY_USB_CONTROLLER = "a600000.ssusb"
+# the Type-C CC pin reports an attach before the device behind it enumerates; a real chestnut shows
+# up in well under a second, so this is how long a cable may look like a GPU before we stop waiting
+CHESTNUT_ENUMERATION_GRACE = 2.
 
 
 def is_chestnut_usb_id(vendor_id: int, product_id: int, include_bootloader: bool = False) -> bool:
@@ -37,7 +42,14 @@ def read_int(path: Path, base: int = 10) -> int:
 
 
 def cable_connected() -> bool:
-  return read_int(TYPEC_CC_ORIENTATION_PATH) != 0
+  # typec_cc_orientation cannot be used for this: the Qualcomm usbpd driver latches the orientation of
+  # the last attach and never clears it on disconnect, so it keeps claiming a cable is present long
+  # after the port is empty (observed: orientation 2 forever after the gamepad was unplugged).
+  # typec_mode is the attribute that actually follows the CC state machine.
+  mode = read(TYPEC_MODE_PATH)
+  if mode is None:
+    return read_int(TYPEC_CC_ORIENTATION_PATH) != 0
+  return mode != TYPEC_MODE_UNATTACHED
 
 
 def usb_devices() -> list[Path]:
