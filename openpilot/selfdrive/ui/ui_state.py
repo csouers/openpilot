@@ -385,12 +385,14 @@ class Device:
     body = ui_state.sm["carBodyState"]
     night_followed = body.parkingLightsOn and 1 <= body.illuminationStep < ILLUMINATION_MAX_STEP
     if night_followed:
+      # the dash steps are discrete detents, so follow them immediately instead of through the slow
+      # ambient filter (10 s) that would smear every step into one
       dash_brightness = self._night_brightness(body.illuminationStep)
-      clipped_brightness = dash_brightness * (1 - NIGHT_SENSOR_WEIGHT) + clipped_brightness * NIGHT_SENSOR_WEIGHT
-
-    brightness = round(self._brightness_filter.update(clipped_brightness))
-    if night_followed:
-      brightness = min(max(brightness + ui_state.night_brightness_offset, 1), 100)
+      target = dash_brightness * (1 - NIGHT_SENSOR_WEIGHT) + clipped_brightness * NIGHT_SENSOR_WEIGHT
+      brightness = round(min(max(target + ui_state.night_brightness_offset, 1), 100))
+      self._brightness_filter.x = clipped_brightness
+    else:
+      brightness = round(self._brightness_filter.update(clipped_brightness))
 
     if not self._awake:
       brightness = 0
