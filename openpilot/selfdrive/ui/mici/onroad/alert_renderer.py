@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from openpilot.cereal import messaging, log
 from opendbc.car.structs import car
 from openpilot.selfdrive.ui.ui_state import ui_state
+from openpilot.selfdrive.ui.mici.onroad.turn_signal_icon import draw_turn_signal, turn_signal_color
 from openpilot.common.filter_simple import BounceFilter, FirstOrderFilter
 from openpilot.common.hardware import COMMA_HARDWARE
 from openpilot.system.ui.lib.application import gui_app, FontWeight, TextAlignment
@@ -114,6 +115,7 @@ class AlertRenderer(Widget):
     self._load_icons()
 
   def _load_icons(self):
+    # turn signals are drawn flat in _draw_icons (see turn_signal_icon.py); these only size/place them
     self._txt_turn_signal_left = gui_app.texture('icons_mici/onroad/turn_signal_left.png', 104, 96)
     self._txt_turn_signal_right = gui_app.texture('icons_mici/onroad/turn_signal_left.png', 104, 96, flip_x=True)
     self._txt_blind_spot_left = gui_app.texture('icons_mici/onroad/blind_spot_left.png', 134, 150)
@@ -251,12 +253,15 @@ class AlertRenderer(Widget):
       pos_x = int(self._rect.x + self._rect.width - alert_layout.icon.margin_x - alert_layout.icon.texture.width)
 
     if alert_layout.icon.texture in (self._txt_turn_signal_left, self._txt_turn_signal_right):
+      side = 'right' if alert_layout.icon.texture is self._txt_turn_signal_right else 'left'
       icon_alpha = self._turn_signal_alpha(alert_layout.icon.side)
-    else:
-      icon_alpha = 255
+      draw_turn_signal(rl.Rectangle(pos_x, self._rect.y + alert_layout.icon.margin_y,
+                                    alert_layout.icon.texture.width, alert_layout.icon.texture.height),
+                       side, turn_signal_color(int(icon_alpha * self._alpha_filter.x)))
+      return
 
     rl.draw_texture_ex(alert_layout.icon.texture, rl.Vector2(pos_x, self._rect.y + alert_layout.icon.margin_y), 0.0, 1.0,
-                       rl.Color(255, 255, 255, int(icon_alpha * self._alpha_filter.x)))
+                       rl.Color(255, 255, 255, int(255 * self._alpha_filter.x)))
 
   def _turn_signal_alpha(self, side: IconSide) -> int:
     """Brightness of the turn signal icon. Follows the car's actual lamp on/off when it reports it."""

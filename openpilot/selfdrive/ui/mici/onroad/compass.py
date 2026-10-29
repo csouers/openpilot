@@ -41,15 +41,17 @@ class Compass(Widget):
 
     self._alpha_filter.update(1.0 if self._has_heading else 0.0)
 
-  @staticmethod
-  def _gps_heading() -> float | None:
+  def _gps_heading(self) -> float | None:
     sm = ui_state.sm
     # u-blox first, then the built-in GPS (qcomgpsd on the four)
     for service in ("gpsLocationExternal", "gpsLocation"):
       if sm.alive[service] and sm.valid[service]:
         loc = sm[service]
-        if loc.hasFix and loc.speed > MIN_HEADING_SPEED:
-          return loc.bearingDeg % 360.0
+        if loc.hasFix:
+          # heading-of-motion is only meaningful while moving: take the first fix so the
+          # compass shows while parked, then only track it when actually driving
+          if loc.speed > MIN_HEADING_SPEED or not self._has_heading:
+            return loc.bearingDeg % 360.0
     return None
 
   def _render(self, _):
