@@ -15,8 +15,9 @@ struct CarBodyState @0x81c2f05a394cf4af {
   leftBlinkerLamp @0 :Bool;   # actual flasher/lamp output, not the stalk
   rightBlinkerLamp @1 :Bool;
   blinkerLampValid @2 :Bool;  # the two above reflect the car's real lamp output
-  parkingLightsOn @3 :Bool;   # car's parking/position lights are on (i.e. the car is in its night/dark mode)
-  illuminationStep @4 :UInt8; # meter/dash illumination step, 1 (dimmest) .. 21 (full); 0 = not reported
+  parkingLightsOn @3 :Bool;   # car's parking/position lamps; NOT the screen day/night mode
+  illuminationStep @4 :UInt8; # meter/dash illumination step, 1..21; 22 = top/idle; 0 = not reported
+  daylightOverride @5 :Bool; # meter keeps screens in day mode despite parking lights (12F85450 byte0 bit7)
 }
 
 struct CustomReserved1 @0xaedffd8f31e7b55d {

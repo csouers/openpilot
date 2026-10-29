@@ -10,6 +10,7 @@ from openpilot.common.params import Params
 from openpilot.common.realtime import drop_realtime
 from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.ui.lib.prime_state import PrimeState
+from openpilot.selfdrive.ui.honda_illumination import HondaIllumination
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.common.hardware import HARDWARE, PC
 from openpilot.common.hardware.usb import CHESTNUT_ENUMERATION_GRACE, cable_connected, get_usb_state, is_chestnut_usb_id
@@ -301,6 +302,8 @@ class Device:
     self._prev_timed_out = False
     self._awake: bool = True
 
+    self._illumination = HondaIllumination()
+    self._illumination_sock = None  # subscribe after manager forks the UI
     self._offroad_brightness: int = BACKLIGHT_OFFROAD
     self._last_brightness: int = 0
     self._brightness_filter = FirstOrderFilter(BACKLIGHT_OFFROAD, 10.00, 1 / gui_app.target_fps)
@@ -382,12 +385,20 @@ class Device:
     # Only below the dash's top detent is the interior actually dimmed: at the top detent (and when
     # the lights are on but the dash is at full brightness, e.g. auto lights in rain) keep the stock
     # light-sensor brightness. 0 = the meter never reported a step.
-    body = ui_state.sm["carBodyState"]
-    night_followed = body.parkingLightsOn and 1 <= body.illuminationStep < ILLUMINATION_MAX_STEP
+    # card only runs onroad. Listen passively to the meter ourselves so accessory/ignition-off
+    # illumination updates still work. Retain the last meter state when the body bus goes to sleep;
+    # screen wake/sleep remains managed separately below.
+    if self._illumination_sock is None:
+      self._illumination_sock = messaging.sub_sock('can', timeout=0)
+    for msg in messaging.drain_sock(self._illumination_sock, wait_for_one=False):
+      for frame in msg.can:
+        self._illumination.update(frame.address, frame.src, bytes(frame.dat))
+    body = self._illumination
+    night_followed = body.seen and not body.daylight_override and body.parking_lights_on and 1 <= body.step < ILLUMINATION_MAX_STEP
     if night_followed:
       # the dash steps are discrete detents, so follow them immediately instead of through the slow
       # ambient filter (10 s) that would smear every step into one
-      dash_brightness = self._night_brightness(body.illuminationStep)
+      dash_brightness = self._night_brightness(body.step)
       target = dash_brightness * (1 - NIGHT_SENSOR_WEIGHT) + clipped_brightness * NIGHT_SENSOR_WEIGHT
       brightness = round(min(max(target + ui_state.night_brightness_offset, 1), 100))
       self._brightness_filter.x = clipped_brightness
