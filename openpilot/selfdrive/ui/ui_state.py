@@ -19,6 +19,10 @@ from openpilot.selfdrive.selfdrived.alertmanager import OFFROAD_ALERTS
 BACKLIGHT_OFFROAD = 65 if HARDWARE.get_device_type() == "mici" else 50
 PARAM_UPDATE_TIME = 1 / 5.0
 
+# meter/dash illumination: 1 = dimmest .. 21 = full brightness (22 = not reporting)
+ILLUMINATION_MAX_STEP = 21
+ILLUMINATION_MIN_FACTOR = 0.15
+
 
 class UIStatus(Enum):
   DISENGAGED = "disengaged"
@@ -361,9 +365,13 @@ class Device:
 
     brightness = round(self._brightness_filter.update(clipped_brightness))
 
-    # Follow the car's night/dark mode: with the headlights on, dim relative to the stock
-    # (light sensor) brightness so the screen matches the meter's illumination
-    if ui_state.night_brightness_offset != 0 and ui_state.sm["carBodyState"].parkingLightsOn:
+    # Follow the meter's dash illumination: with the parking/position lights on the car is in its
+    # night/dark mode, and the meter's dimmer step (1 = dimmest .. 21 = full) scales the screen
+    if ui_state.sm["carBodyState"].parkingLightsOn:
+      step = ui_state.sm["carBodyState"].illuminationStep
+      if 1 <= step <= ILLUMINATION_MAX_STEP:
+        factor = float(np.interp(step, [1, ILLUMINATION_MAX_STEP], [ILLUMINATION_MIN_FACTOR, 1.0]))
+        brightness = round(brightness * factor)
       brightness = min(max(brightness + ui_state.night_brightness_offset, 1), 100)
 
     if not self._awake:
