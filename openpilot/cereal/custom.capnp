@@ -10,7 +10,12 @@ $Cxx.namespace("cereal");
 # DO rename the structs
 # DON'T change the identifier (e.g. @0x81c2f05a394cf4af)
 
-struct CustomReserved0 @0x81c2f05a394cf4af {
+struct CarBodyState @0x81c2f05a394cf4af {
+  # Body-bus state that only some cars expose (Honda B-CAN on this fork)
+  leftBlinkerLamp @0 :Bool;   # actual flasher/lamp output, not the stalk
+  rightBlinkerLamp @1 :Bool;
+  blinkerLampValid @2 :Bool;  # the two above reflect the car's real lamp output
+  headlightsOn @3 :Bool;      # car's headlights are on (i.e. the car is in its night/dark mode)
 }
 
 struct CustomReserved1 @0xaedffd8f31e7b55d {

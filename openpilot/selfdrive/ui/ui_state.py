@@ -58,6 +58,7 @@ class UIState:
         "carParams",
         "driverMonitoringState",
         "carState",
+        "carBodyState",
         "driverStateV2",
         "narrowRoadCameraState",
         "wideRoadCameraState",
@@ -110,6 +111,7 @@ class UIState:
     self.is_body: bool | None = False
     self.CP: car.CarParams | None = None
     self.light_sensor: float = -1.0
+    self.night_brightness_offset: int = 0
 
     self._params_thread: threading.Thread | None = None
 
@@ -250,6 +252,7 @@ class UIState:
 
     self.recording_audio = self.params.get_bool("RecordAudio") and self.started
     self.is_metric = self.params.get_bool("IsMetric")
+    self.night_brightness_offset = self.params.get("NightBrightnessOffset", return_default=True)
     self.initial_cruise_speed = self.params.get("InitialCruiseSpeedKph", return_default=True)
     self.always_on_dm = self.params.get_bool("AlwaysOnDM")
     self.navigation_enabled = self.params.get_bool("NavigationEnabled")
@@ -357,6 +360,12 @@ class Device:
       clipped_brightness = float(np.interp(clipped_brightness, [0, 1], [30, 100]))
 
     brightness = round(self._brightness_filter.update(clipped_brightness))
+
+    # Follow the car's night/dark mode: with the headlights on, dim relative to the stock
+    # (light sensor) brightness so the screen matches the meter's illumination
+    if self.night_brightness_offset != 0 and self.sm["carBodyState"].headlightsOn:
+      brightness = min(max(brightness + self.night_brightness_offset, 1), 100)
+
     if not self._awake:
       brightness = 0
 

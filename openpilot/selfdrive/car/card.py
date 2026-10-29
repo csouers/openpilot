@@ -219,6 +219,16 @@ class Car:
     cs_send.carState.cumLagMs = -self.rk.remaining * 1000.
     self.pm.send('carState', cs_send)
 
+    # body-bus state some cars expose (e.g. Honda B-CAN flasher/illumination) for the UI
+    bs = self.CI.CS
+    bs_send = messaging.new_message('carBodyState')
+    bs_send.valid = CS.canValid
+    bs_send.carBodyState.leftBlinkerLamp = bool(getattr(bs, 'leftBlinker_lamp', False))
+    bs_send.carBodyState.rightBlinkerLamp = bool(getattr(bs, 'rightBlinker_lamp', False))
+    bs_send.carBodyState.blinkerLampValid = bool(getattr(bs, 'lamp_seen', False))
+    bs_send.carBodyState.headlightsOn = bool(getattr(bs, 'headlights_on', False))
+    self.pm.send('carBodyState', bs_send)
+
     if RD is not None:
       tracks_msg = messaging.new_message('radarTracks')
       tracks_msg.valid = not any(RD.errors.to_dict().values())

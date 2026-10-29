@@ -33,6 +33,8 @@ ALERT_COLORS = {
 }
 
 TURN_SIGNAL_BLINK_PERIOD = 1 / (80 / 60)  # Mazda heartbeat turn signal BPM
+# Cars that don't report their actual flasher output get a synthetic blink.
+# Honda's B-CAN lamp state (12f810_Lighting) is used instead when available.
 
 DEBUG = False
 
@@ -243,24 +245,33 @@ class AlertRenderer(Widget):
     if alert_layout.icon is None:
       return
 
-    if time.monotonic() - self._turn_signal_timer > TURN_SIGNAL_BLINK_PERIOD:
-      self._turn_signal_timer = time.monotonic()
-      self._turn_signal_alpha_filter.x = 255 * 2
-    else:
-      self._turn_signal_alpha_filter.update(255 * 0.2)
-
     if alert_layout.icon.side == 'left':
       pos_x = int(self._rect.x + alert_layout.icon.margin_x)
     else:
       pos_x = int(self._rect.x + self._rect.width - alert_layout.icon.margin_x - alert_layout.icon.texture.width)
 
-    if alert_layout.icon.texture not in (self._txt_turn_signal_left, self._txt_turn_signal_right):
-      icon_alpha = 255
+    if alert_layout.icon.texture in (self._txt_turn_signal_left, self._txt_turn_signal_right):
+      icon_alpha = self._turn_signal_alpha(alert_layout.icon.side)
     else:
-      icon_alpha = int(min(self._turn_signal_alpha_filter.x, 255))
+      icon_alpha = 255
 
     rl.draw_texture_ex(alert_layout.icon.texture, rl.Vector2(pos_x, self._rect.y + alert_layout.icon.margin_y), 0.0, 1.0,
                        rl.Color(255, 255, 255, int(icon_alpha * self._alpha_filter.x)))
+
+  def _turn_signal_alpha(self, side: IconSide) -> int:
+    """Brightness of the turn signal icon. Follows the car's actual lamp on/off when it reports it."""
+    body = ui_state.sm['carBodyState']
+    if body.blinkerLampValid:
+      lamp_on = body.leftBlinkerLamp if side == 'left' else body.rightBlinkerLamp
+      return 255 if lamp_on else 0
+
+    # fall back to a synthetic blink for cars that don't report the flasher output
+    if time.monotonic() - self._turn_signal_timer > TURN_SIGNAL_BLINK_PERIOD:
+      self._turn_signal_timer = time.monotonic()
+      self._turn_signal_alpha_filter.x = 255 * 2
+    else:
+      self._turn_signal_alpha_filter.update(255 * 0.2)
+    return int(min(self._turn_signal_alpha_filter.x, 255))
 
   def _draw_background(self, alert: Alert) -> None:
     # draw top gradient for alert text at top
