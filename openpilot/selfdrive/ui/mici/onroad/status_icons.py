@@ -9,7 +9,8 @@ from openpilot.system.ui.widgets import Widget
 # Vertical space the status icons occupy at the top of the rail
 STATUS_ICONS_HEIGHT = 100
 # Compass sits at the very top of the rail, the experimental icon right below it
-COMPASS_SIZE = 44
+COMPASS_W = 52
+COMPASS_H = 36
 COMPASS_MARGIN_TOP = 4
 
 
@@ -43,15 +44,15 @@ class StatusIconColumn(Widget):
     )
 
     # compass in the top-right corner
-    self._compass.render(rl.Rectangle(panel.x + (panel.width - COMPASS_SIZE) / 2,
+    self._compass.render(rl.Rectangle(panel.x + (panel.width - COMPASS_W) / 2,
                                      panel.y + COMPASS_MARGIN_TOP,
-                                     COMPASS_SIZE, COMPASS_SIZE))
+                                     COMPASS_W, COMPASS_H))
 
     if not self._experimental_mode:
       return
 
     center_x = panel.x + panel.width / 2
-    icons_top = panel.y + COMPASS_MARGIN_TOP + COMPASS_SIZE
+    icons_top = panel.y + COMPASS_MARGIN_TOP + COMPASS_H
     center = rl.Vector2(center_x, icons_top + (panel.y + STATUS_ICONS_HEIGHT - icons_top) / 2)
 
     self._draw_texture_centered(self._experimental_texture, center, rl.WHITE)
