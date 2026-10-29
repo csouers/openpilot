@@ -1,7 +1,7 @@
 import pyray as rl
 
-from openpilot.selfdrive.ui.mici.onroad.turn_signal_icon import draw_turn_signal, turn_signal_color
 from openpilot.selfdrive.ui.ui_state import ui_state
+from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.widgets import Widget
 
 ICON_W, ICON_H = 72, 66
@@ -18,6 +18,8 @@ class TurnSignals(Widget):
 
   def __init__(self):
     super().__init__()
+    self._left = gui_app.texture('icons_mici/onroad/turn_signal_left.png', ICON_W, ICON_H)
+    self._right = gui_app.texture('icons_mici/onroad/turn_signal_left.png', ICON_W, ICON_H, flip_x=True)
     self._left_on = False
     self._right_on = False
 
@@ -34,8 +36,7 @@ class TurnSignals(Widget):
 
   def _render(self, _):
     bottom_y = self._rect.y + self._rect.height - ICON_H - MARGIN
-    left_box = rl.Rectangle(self._rect.x + MARGIN, bottom_y, ICON_W, ICON_H)
-    right_box = rl.Rectangle(self._rect.x + self._rect.width - MARGIN - ICON_W, bottom_y, ICON_W, ICON_H)
-
-    for box, side, on in ((left_box, "left", self._left_on), (right_box, "right", self._right_on)):
-      draw_turn_signal(box, side, turn_signal_color(255 if on else DIM_ALPHA))
+    for texture, x, on in ((self._left, self._rect.x + MARGIN, self._left_on),
+                           (self._right, self._rect.x + self._rect.width - MARGIN - ICON_W, self._right_on)):
+      alpha = 255 if on else DIM_ALPHA
+      rl.draw_texture_ex(texture, rl.Vector2(x, bottom_y), 0.0, 1.0, rl.Color(255, 255, 255, alpha))

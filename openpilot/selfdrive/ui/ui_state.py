@@ -19,10 +19,10 @@ from openpilot.selfdrive.selfdrived.alertmanager import OFFROAD_ALERTS
 BACKLIGHT_OFFROAD = 65 if HARDWARE.get_device_type() == "mici" else 50
 PARAM_UPDATE_TIME = 1 / 5.0
 
-# meter/dash illumination: 1 = dimmest .. 21 = full brightness (22 = not reporting).
+# meter/dash illumination: 1 = dimmest .. 22 = top detent (full brightness).
 # At night the screen follows the car's dimmer directly instead of the camera light sensor: the top
 # detent is the ceiling, one step below it already drops a long way, like the dash itself.
-ILLUMINATION_MAX_STEP = 21
+ILLUMINATION_MAX_STEP = 22
 ILLUMINATION_STEP_BELOW_TOP = 0.6  # fraction of the ceiling at (max - 1)
 # the camera light sensor still contributes this much when the car's dimmer is in charge, so a daylight
 # dimming (rain/tunnel) doesn't leave the screen unusably dark and a night floor isn't pitch black
