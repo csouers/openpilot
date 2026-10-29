@@ -356,11 +356,9 @@ class Device:
     self._offroad_brightness = min(max(brightness, 0), 100)
 
   def _night_brightness(self, step: int) -> float:
-    """Screen brightness % from the car's dash illumination step (top detent = ceiling)."""
+    """Screen brightness % for a dash dimmer step below its top detent."""
     ceiling = ui_state.night_brightness_max
     floor = min(ui_state.night_brightness_min, ceiling)
-    if step >= ILLUMINATION_MAX_STEP:
-      return float(ceiling)
     return float(np.interp(step, [1, ILLUMINATION_MAX_STEP - 1],
                            [floor, ceiling * ILLUMINATION_STEP_BELOW_TOP]))
 
@@ -378,9 +376,11 @@ class Device:
 
       clipped_brightness = float(np.interp(clipped_brightness, [0, 1], [30, 100]))
 
-    # At night the car's own dash illumination step drives the screen instead of the light sensor
+    # Only below the dash's top detent is the interior actually dimmed: at the top detent (and when
+    # the lights are on but the dash is at full brightness, e.g. auto lights in rain) keep the stock
+    # light-sensor brightness. 0 = the meter never reported a step.
     body = ui_state.sm["carBodyState"]
-    night_followed = body.parkingLightsOn and body.illuminationStep >= 1  # 0 = never reported
+    night_followed = body.parkingLightsOn and 1 <= body.illuminationStep < ILLUMINATION_MAX_STEP
     if night_followed:
       clipped_brightness = self._night_brightness(body.illuminationStep)
 
