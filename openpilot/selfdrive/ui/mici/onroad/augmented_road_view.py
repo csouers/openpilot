@@ -14,6 +14,7 @@ from openpilot.selfdrive.ui.mici.onroad.model_renderer import ModelRenderer
 from openpilot.selfdrive.ui.mici.onroad.navigation import NavigationPanel, PANEL_WIDTH
 from openpilot.selfdrive.ui.mici.onroad.confidence_ball import ConfidenceBall
 from openpilot.selfdrive.ui.mici.onroad.status_icons import StatusIconColumn
+from openpilot.selfdrive.ui.mici.onroad.turn_signals import TurnSignals
 from openpilot.selfdrive.ui.mici.onroad.cameraview import CameraView
 from openpilot.system.ui.lib.application import FontWeight, gui_app, MousePos, MouseEvent, TextAlignment, TextAlignmentVertical
 from openpilot.system.ui.widgets.label import UnifiedLabel
@@ -179,6 +180,7 @@ class AugmentedRoadView(CameraView):
     self._alert_renderer = AlertRenderer()
     # self._driver_state_renderer = DriverStateRenderer()
     self._status_icons = StatusIconColumn()
+    self._turn_signals = TurnSignals()
     self._confidence_ball = ConfidenceBall()
     self._bsm_left_slide = FirstOrderFilter(0.0, 0.1, 1 / gui_app.target_fps)
     self._bsm_right_slide = FirstOrderFilter(0.0, 0.1, 1 / gui_app.target_fps)
@@ -309,6 +311,9 @@ class AugmentedRoadView(CameraView):
     else:
       self._status_icons.render(self.rect)
       # self._confidence_ball.render(self.rect)
+
+    # debug: bottom-corner turn signal arrows (car's actual lamp output)
+    self._turn_signals.render(self.rect)
 
     self._bookmark_icon.render(self.rect)
 

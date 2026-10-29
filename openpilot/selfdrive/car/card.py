@@ -226,7 +226,7 @@ class Car:
     bs_send.carBodyState.leftBlinkerLamp = bool(getattr(bs, 'leftBlinker_lamp', False))
     bs_send.carBodyState.rightBlinkerLamp = bool(getattr(bs, 'rightBlinker_lamp', False))
     bs_send.carBodyState.blinkerLampValid = bool(getattr(bs, 'lamp_seen', False))
-    bs_send.carBodyState.headlightsOn = bool(getattr(bs, 'headlights_on', False))
+    bs_send.carBodyState.parkingLightsOn = bool(getattr(bs, 'parking_lights_on', False))
     self.pm.send('carBodyState', bs_send)
 
     if RD is not None:

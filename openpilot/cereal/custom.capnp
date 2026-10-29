@@ -15,7 +15,7 @@ struct CarBodyState @0x81c2f05a394cf4af {
   leftBlinkerLamp @0 :Bool;   # actual flasher/lamp output, not the stalk
   rightBlinkerLamp @1 :Bool;
   blinkerLampValid @2 :Bool;  # the two above reflect the car's real lamp output
-  headlightsOn @3 :Bool;      # car's headlights are on (i.e. the car is in its night/dark mode)
+  parkingLightsOn @3 :Bool;   # car's parking/position lights are on (i.e. the car is in its night/dark mode)
 }
 
 struct CustomReserved1 @0xaedffd8f31e7b55d {

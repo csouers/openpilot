@@ -363,7 +363,7 @@ class Device:
 
     # Follow the car's night/dark mode: with the headlights on, dim relative to the stock
     # (light sensor) brightness so the screen matches the meter's illumination
-    if ui_state.night_brightness_offset != 0 and ui_state.sm["carBodyState"].headlightsOn:
+    if ui_state.night_brightness_offset != 0 and ui_state.sm["carBodyState"].parkingLightsOn:
       brightness = min(max(brightness + ui_state.night_brightness_offset, 1), 100)
 
     if not self._awake:
