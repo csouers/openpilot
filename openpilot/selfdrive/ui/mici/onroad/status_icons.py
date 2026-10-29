@@ -7,11 +7,13 @@ from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.widgets import Widget
 
 # Vertical space the status icons occupy at the top of the rail
-STATUS_ICONS_HEIGHT = 100
-# Compass sits at the very top of the rail, the experimental icon right below it
-COMPASS_W = 52
-COMPASS_H = 36
-COMPASS_MARGIN_TOP = 4
+STATUS_ICONS_HEIGHT = 116
+# Compass sits at the very top of the rail (wider than the rail so two big letters fit),
+# the experimental icon right below it
+COMPASS_W = 80
+COMPASS_H = 52
+COMPASS_MARGIN_TOP = 2
+COMPASS_MARGIN_RIGHT = 4
 
 
 class StatusIconColumn(Widget):
@@ -43,9 +45,9 @@ class StatusIconColumn(Widget):
       self.rect.height,
     )
 
-    # compass in the top-right corner
-    self._compass.render(rl.Rectangle(panel.x + (panel.width - COMPASS_W) / 2,
-                                     panel.y + COMPASS_MARGIN_TOP,
+    # compass in the top-right corner (right-aligned to the screen edge)
+    self._compass.render(rl.Rectangle(self.rect.x + self.rect.width - COMPASS_W - COMPASS_MARGIN_RIGHT,
+                                     self.rect.y + COMPASS_MARGIN_TOP,
                                      COMPASS_W, COMPASS_H))
 
     if not self._experimental_mode:

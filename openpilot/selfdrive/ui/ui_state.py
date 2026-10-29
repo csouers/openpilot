@@ -19,9 +19,11 @@ from openpilot.selfdrive.selfdrived.alertmanager import OFFROAD_ALERTS
 BACKLIGHT_OFFROAD = 65 if HARDWARE.get_device_type() == "mici" else 50
 PARAM_UPDATE_TIME = 1 / 5.0
 
-# meter/dash illumination: 1 = dimmest .. 21 = full brightness (22 = not reporting)
+# meter/dash illumination: 1 = dimmest .. 21 = full brightness (22 = not reporting).
+# The top detent is full; one step below it already drops a long way, like the dash does.
 ILLUMINATION_MAX_STEP = 21
 ILLUMINATION_MIN_FACTOR = 0.15
+ILLUMINATION_STEP_BELOW_TOP = 0.55  # factor at (max - 1)
 
 
 class UIStatus(Enum):
@@ -370,7 +372,11 @@ class Device:
     if ui_state.sm["carBodyState"].parkingLightsOn:
       step = ui_state.sm["carBodyState"].illuminationStep
       if 1 <= step <= ILLUMINATION_MAX_STEP:
-        factor = float(np.interp(step, [1, ILLUMINATION_MAX_STEP], [ILLUMINATION_MIN_FACTOR, 1.0]))
+        if step >= ILLUMINATION_MAX_STEP:
+          factor = 1.0
+        else:
+          factor = float(np.interp(step, [1, ILLUMINATION_MAX_STEP - 1],
+                                   [ILLUMINATION_MIN_FACTOR, ILLUMINATION_STEP_BELOW_TOP]))
         brightness = round(brightness * factor)
       brightness = min(max(brightness + ui_state.night_brightness_offset, 1), 100)
 
