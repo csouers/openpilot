@@ -20,10 +20,10 @@ BACKLIGHT_OFFROAD = 65 if HARDWARE.get_device_type() == "mici" else 50
 PARAM_UPDATE_TIME = 1 / 5.0
 
 # meter/dash illumination: 1 = dimmest .. 21 = full brightness (22 = not reporting).
-# The top detent is full; one step below it already drops a long way, like the dash does.
+# At night the screen follows the car's dimmer directly instead of the camera light sensor: the top
+# detent is the ceiling, one step below it already drops a long way, like the dash itself.
 ILLUMINATION_MAX_STEP = 21
-ILLUMINATION_MIN_FACTOR = 0.15
-ILLUMINATION_STEP_BELOW_TOP = 0.55  # factor at (max - 1)
+ILLUMINATION_STEP_BELOW_TOP = 0.6  # fraction of the ceiling at (max - 1)
 
 
 class UIStatus(Enum):
@@ -118,6 +118,8 @@ class UIState:
     self.CP: car.CarParams | None = None
     self.light_sensor: float = -1.0
     self.night_brightness_offset: int = 0
+    self.night_brightness_max: int = 40
+    self.night_brightness_min: int = 4
 
     self._params_thread: threading.Thread | None = None
 
@@ -259,6 +261,8 @@ class UIState:
     self.recording_audio = self.params.get_bool("RecordAudio") and self.started
     self.is_metric = self.params.get_bool("IsMetric")
     self.night_brightness_offset = self.params.get("NightBrightnessOffset", return_default=True)
+    self.night_brightness_max = self.params.get("NightBrightnessMax", return_default=True)
+    self.night_brightness_min = self.params.get("NightBrightnessMin", return_default=True)
     self.initial_cruise_speed = self.params.get("InitialCruiseSpeedKph", return_default=True)
     self.always_on_dm = self.params.get_bool("AlwaysOnDM")
     self.navigation_enabled = self.params.get_bool("NavigationEnabled")
@@ -351,6 +355,15 @@ class Device:
       brightness = BACKLIGHT_OFFROAD
     self._offroad_brightness = min(max(brightness, 0), 100)
 
+  def _night_brightness(self, step: int) -> float:
+    """Screen brightness % from the car's dash illumination step (top detent = ceiling)."""
+    ceiling = ui_state.night_brightness_max
+    floor = min(ui_state.night_brightness_min, ceiling)
+    if step >= ILLUMINATION_MAX_STEP:
+      return float(ceiling)
+    return float(np.interp(step, [1, ILLUMINATION_MAX_STEP - 1],
+                           [floor, ceiling * ILLUMINATION_STEP_BELOW_TOP]))
+
   def _update_brightness(self):
     clipped_brightness = self._offroad_brightness
 
@@ -365,19 +378,14 @@ class Device:
 
       clipped_brightness = float(np.interp(clipped_brightness, [0, 1], [30, 100]))
 
-    brightness = round(self._brightness_filter.update(clipped_brightness))
+    # At night the car's own dash illumination step drives the screen instead of the light sensor
+    body = ui_state.sm["carBodyState"]
+    night_followed = body.parkingLightsOn and body.illuminationStep >= 1  # 0 = never reported
+    if night_followed:
+      clipped_brightness = self._night_brightness(body.illuminationStep)
 
-    # Follow the meter's dash illumination: with the parking/position lights on the car is in its
-    # night/dark mode, and the meter's dimmer step (1 = dimmest .. 21 = full) scales the screen
-    if ui_state.sm["carBodyState"].parkingLightsOn:
-      step = ui_state.sm["carBodyState"].illuminationStep
-      if 1 <= step <= ILLUMINATION_MAX_STEP:
-        if step >= ILLUMINATION_MAX_STEP:
-          factor = 1.0
-        else:
-          factor = float(np.interp(step, [1, ILLUMINATION_MAX_STEP - 1],
-                                   [ILLUMINATION_MIN_FACTOR, ILLUMINATION_STEP_BELOW_TOP]))
-        brightness = round(brightness * factor)
+    brightness = round(self._brightness_filter.update(clipped_brightness))
+    if night_followed:
       brightness = min(max(brightness + ui_state.night_brightness_offset, 1), 100)
 
     if not self._awake:
