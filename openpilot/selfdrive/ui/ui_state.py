@@ -24,6 +24,9 @@ PARAM_UPDATE_TIME = 1 / 5.0
 # detent is the ceiling, one step below it already drops a long way, like the dash itself.
 ILLUMINATION_MAX_STEP = 21
 ILLUMINATION_STEP_BELOW_TOP = 0.6  # fraction of the ceiling at (max - 1)
+# the camera light sensor still contributes this much when the car's dimmer is in charge, so a daylight
+# dimming (rain/tunnel) doesn't leave the screen unusably dark and a night floor isn't pitch black
+NIGHT_SENSOR_WEIGHT = 0.25
 
 
 class UIStatus(Enum):
@@ -382,7 +385,8 @@ class Device:
     body = ui_state.sm["carBodyState"]
     night_followed = body.parkingLightsOn and 1 <= body.illuminationStep < ILLUMINATION_MAX_STEP
     if night_followed:
-      clipped_brightness = self._night_brightness(body.illuminationStep)
+      dash_brightness = self._night_brightness(body.illuminationStep)
+      clipped_brightness = dash_brightness * (1 - NIGHT_SENSOR_WEIGHT) + clipped_brightness * NIGHT_SENSOR_WEIGHT
 
     brightness = round(self._brightness_filter.update(clipped_brightness))
     if night_followed:
