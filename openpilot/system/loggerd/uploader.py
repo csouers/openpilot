@@ -6,7 +6,6 @@ import requests
 import threading
 import time
 import traceback
-import datetime
 from collections.abc import Iterator
 
 from openpilot.cereal import log
@@ -22,6 +21,10 @@ from openpilot.common.swaglog import cloudlog
 NetworkType = log.DeviceState.NetworkType
 UPLOAD_ATTR_NAME = 'user.upload'
 UPLOAD_ATTR_VALUE = b'1'
+
+# this fork does not report crashes/bugs to comma: the crash and boot
+# log directories are never uploaded (they are still written locally)
+NO_UPLOAD_DIRS = ("crash", "boot")
 
 MAX_UPLOAD_SIZES = {
   "qlog": 25*1e6,  # can't be too restrictive here since we use qlogs to find
@@ -82,7 +85,6 @@ class Uploader:
     # stats for last successfully uploaded file
     self.last_filename = ""
 
-    self.immediate_folders = ["crash/", "boot/"]
     self.immediate_priority = {"qlog": 0, "qlog.zst": 0, "qcamera.ts": 1}
 
   def list_upload_files(self, metered: bool) -> Iterator[tuple[str, str, str]]:
@@ -90,6 +92,9 @@ class Uploader:
     requested_routes = [] if r is None else [route for route in r.split(",") if route]
 
     for logdir in listdir_by_creation(self.root):
+      if logdir in NO_UPLOAD_DIRS:
+        continue
+
       path = os.path.join(self.root, logdir)
       try:
         names = os.listdir(path)
@@ -104,7 +109,6 @@ class Uploader:
         fn = os.path.join(path, name)
         # skip files already uploaded
         try:
-          ctime = os.path.getctime(fn)
           is_uploaded = getxattr(fn, UPLOAD_ATTR_NAME) == UPLOAD_ATTR_VALUE
         except OSError:
           cloudlog.event("uploader_getxattr_failed", key=key, fn=fn)
@@ -115,10 +119,6 @@ class Uploader:
 
         # limit uploading on metered connections
         if metered:
-          dt = datetime.timedelta(hours=12)
-          if logdir in self.immediate_folders and (datetime.datetime.now() - datetime.datetime.fromtimestamp(ctime)) < dt:
-            continue
-
           if name == "qcamera.ts" and not any(logdir.startswith(r.split('|')[-1]) for r in requested_routes):
             continue
 
@@ -126,10 +126,6 @@ class Uploader:
 
   def next_file_to_upload(self, metered: bool) -> tuple[str, str, str] | None:
     upload_files = list(self.list_upload_files(metered))
-
-    for name, key, fn in upload_files:
-      if any(f in fn for f in self.immediate_folders):
-        return name, key, fn
 
     for name, key, fn in upload_files:
       if name in self.immediate_priority:

@@ -77,8 +77,9 @@ class TestUploader(UploaderTestCase):
     return keys
 
   def test_upload(self):
-    self.gen_files(lock=False)
-    exp_order = self.gen_order([self.seg_num], [])
+    # boot/ (and crash/) are never uploaded by design, see NO_UPLOAD_DIRS
+    self.gen_files(lock=False, boot=False)
+    exp_order = self.gen_order([self.seg_num], [], boot=False)
 
     self.start_thread()
     log_handler.wait_for_uploads(len(exp_order))
@@ -93,8 +94,8 @@ class TestUploader(UploaderTestCase):
     assert log_handler.upload_order == exp_order, "Files uploaded in wrong order"
 
   def test_upload_with_wrong_xattr(self):
-    self.gen_files(lock=False, xattr=b'0')
-    exp_order = self.gen_order([self.seg_num], [])
+    self.gen_files(lock=False, xattr=b'0', boot=False)
+    exp_order = self.gen_order([self.seg_num], [], boot=False)
 
     self.start_thread()
     log_handler.wait_for_uploads(len(exp_order))
@@ -110,8 +111,8 @@ class TestUploader(UploaderTestCase):
 
   def test_upload_ignored(self):
     self.set_ignore()
-    self.gen_files(lock=False)
-    exp_order = self.gen_order([self.seg_num], [])
+    self.gen_files(lock=False, boot=False)
+    exp_order = self.gen_order([self.seg_num], [], boot=False)
 
     self.start_thread()
     log_handler.wait_for_uploads(len(exp_order), ignored=True)
@@ -124,6 +125,25 @@ class TestUploader(UploaderTestCase):
       assert os.getxattr((Path(Paths.log_root()) / f_path).with_suffix(""), UPLOAD_ATTR_NAME) == UPLOAD_ATTR_VALUE, "All files not ignored"
 
     assert log_handler.upload_ignored == exp_order, "Files ignored in wrong order"
+
+  def test_crash_and_boot_never_uploaded(self):
+    # this fork must never ship comma's crash/boot reports
+    self.gen_files(lock=False, boot=False)
+    crash_path = self.make_file_with_data("crash", f"{self.seg_dir}_somefile", 1)
+    boot_path = self.make_file_with_data("boot", f"{self.seg_dir}.zst", 1)
+    exp_order = self.gen_order([self.seg_num], [], boot=False)
+
+    self.start_thread()
+    log_handler.wait_for_uploads(len(exp_order))
+    self.join_thread()
+
+    assert log_handler.upload_order == exp_order, "crash/boot files must not be uploaded"
+    for f_path in (crash_path, boot_path):
+      try:
+        uploaded = os.getxattr(f_path, UPLOAD_ATTR_NAME) == UPLOAD_ATTR_VALUE
+      except OSError:
+        uploaded = False
+      assert not uploaded, f"{f_path} was uploaded"
 
   def test_upload_files_in_create_order(self):
     seg1_nums = [0, 1, 2, 10, 20]
