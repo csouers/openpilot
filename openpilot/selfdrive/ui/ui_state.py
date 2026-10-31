@@ -389,6 +389,10 @@ class Device:
       self._ramp_value = target  # ramp complete: snap so the last frame isn't left short
       return self._ramp_value
     frac = min(max(1.0 - (self._ramp_end_ts - now) / NIGHT_RAMP_TIME, 0.0), 1.0)
+    if target < self._ramp_from:
+      # like the dash's dimmer going down: most of the change happens early, settling gently
+      # (ease-out). Brightening back up stays linear.
+      frac = 1.0 - (1.0 - frac) ** 2
     self._ramp_value = self._ramp_from + (target - self._ramp_from) * frac
     return self._ramp_value
 
