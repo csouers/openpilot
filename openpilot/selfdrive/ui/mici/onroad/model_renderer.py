@@ -22,6 +22,15 @@ LEAD_BAR_WIDTH = 5.4  # m (3x the original 1.8, spans the lane behind the target
 ROAD_EDGE_WIDTH = 0.08  # narrower than the 0.16 lane-line width factor
 ROAD_EDGE_COLOR = rl.Color(255, 0, 21, 255)  # same red as critical alerts
 
+# neo-era steering-angle path (selfdrive/ui/ui.c @ v0.3.5 draw_steering): curvature from the
+# measured steering angle, drawn as a translucent blue line; matches the lane curve when tracking well
+STEER_PATH_POINTS = 50
+STEER_PATH_HALF_WIDTH = 0.15  # m, half-width of the drawn line
+STEER_PATH_RATIO = 15.3  # steering ratio fallback when CP isn't up yet
+STEER_PATH_WHEELBASE = 2.67  # m, fallback
+STEER_PATH_SLIP = 0.0014
+STEER_PATH_COLOR = rl.Color(0, 0, 255, 128)  # the original nvgRGBA(0, 0, 255, 128)
+
 STOCK_PATH_GRADIENT = Gradient(
   start=(0.0, 1.0),
   end=(0.0, 0.0),
@@ -131,6 +140,7 @@ class ModelRenderer(Widget):
     # Draw elements
     self._draw_lane_lines()
     self._draw_path()
+    self._draw_steer_path()
 
     if render_lead_indicator:
       self._update_leads(sm)
@@ -319,6 +329,26 @@ class ModelRenderer(Widget):
       draw_polygon(self._rect, path_pts, gradient=self._path_gradient)
     else:
       draw_polygon(self._rect, path_pts, rl.Color(255, 255, 255, 30))
+
+  def _draw_steer_path(self):
+    """Neo-era steering-angle path: where the car goes if the wheel stays where it is."""
+    cs = ui_state.sm['carState']
+    cp = ui_state.CP
+    steer_ratio = cp.steerRatio if cp else STEER_PATH_RATIO
+    wheel_base = cp.wheelbase if cp else STEER_PATH_WHEELBASE
+
+    angle_rad = cs.steeringAngleDeg * np.pi / 180.0
+    curvature = angle_rad / (steer_ratio * wheel_base * (1.0 + STEER_PATH_SLIP * cs.vEgo ** 2))
+
+    x = np.arange(STEER_PATH_POINTS, dtype=np.float32)
+    y = x * np.tan(np.arcsin(np.clip(x * curvature, -0.999, 0.999)) / 2.0)
+    line = np.column_stack((x, y, np.zeros(STEER_PATH_POINTS, dtype=np.float32)))
+
+    pts = self._map_line_to_polygon(line, STEER_PATH_HALF_WIDTH, 0.0, STEER_PATH_POINTS - 1)
+    if pts.size == 0:
+      return
+    offset = np.array([self._rect.x, self._rect.y], dtype=np.float32)
+    draw_polygon(self._rect, pts + offset, STEER_PATH_COLOR)
 
   def _draw_lead_indicator(self):
     # green to match the other engaged-green elements (lane lines, path)
