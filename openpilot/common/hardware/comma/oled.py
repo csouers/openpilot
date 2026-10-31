@@ -11,6 +11,7 @@ proposed exactly that sleep cycle as the fix.
 """
 
 import struct
+import subprocess
 import time
 from pathlib import Path
 
@@ -19,8 +20,8 @@ from openpilot.common.swaglog import cloudlog
 PANEL_CMD = Path('/sys/kernel/debug/dsi_dwo_video_display/mipi_command')
 BACKLIGHT = Path('/sys/class/backlight/panel0-backlight')
 
-# The path above is derived from the kernel command line panel selection, so a unit with a
-# different panel never matches it and this is a no-op there.
+# The panel selection in the kernel command line determines this path, so a unit with a
+# different panel never matches it and this becomes a no-op there.
 #
 # Each record is: dtype, last, vc, ack, unused, len_hi, len_lo, payload...
 # The delay byte (index 4) is ignored by the debugfs implementation.
@@ -39,32 +40,60 @@ def _record(command: str) -> bytes:
   return struct.pack(f'i{len(payload)}s', len(payload), payload)
 
 
+def _panel_command_writable() -> bool:
+  # /sys/kernel/debug is root-only, so we cannot even stat the file as the comma user.
+  try:
+    return subprocess.run(['sudo', '-n', 'test', '-w', str(PANEL_CMD)],
+                          capture_output=True, timeout=5).returncode == 0
+  except Exception:
+    return False
+
+
+def _write_panel(data: bytes) -> bool:
+  # tee does a single write(2) for a payload this small, which the debugfs handler needs:
+  # it parses one or more length-prefixed records out of a single write.
+  try:
+    ret = subprocess.run(['sudo', '-n', 'tee', str(PANEL_CMD)], input=data,
+                         stdout=subprocess.DEVNULL, capture_output=True, timeout=5)
+    return ret.returncode == 0
+  except Exception:
+    return False
+
+
+def _brightness() -> int:
+  try:
+    return int(subprocess.run(['sudo', '-n', 'cat', str(BACKLIGHT / 'brightness')],
+                              capture_output=True, text=True, timeout=5).stdout.strip())
+  except Exception:
+    return 0
+
+
+def _set_brightness(value: str) -> None:
+  try:
+    subprocess.run(['sudo', '-n', 'tee', str(BACKLIGHT / 'brightness')], input=value.encode(),
+                   stdout=subprocess.DEVNULL, capture_output=True, timeout=5)
+  except Exception:
+    pass
+
+
 def fix_panel_black_floor(timeout: float = 10.) -> bool:
   """Zero the FE05 registers that give this panel a lifted black level. Idempotent."""
   deadline = time.monotonic() + timeout
-  while not PANEL_CMD.exists() and time.monotonic() < deadline:
+  while not _panel_command_writable() and time.monotonic() < deadline:
     time.sleep(0.5)
-  if not PANEL_CMD.exists():
+  if not _panel_command_writable():
     return False
 
-  try:
-    brightness = int((BACKLIGHT / 'brightness').read_text().strip())
-  except Exception:
-    brightness = 0
+  brightness = _brightness()
 
-  try:
-    PANEL_CMD.write_bytes(b''.join(_record(command) for command in PANEL_FIX_SEQUENCE))
-  except Exception:
-    cloudlog.exception('panel black floor fix failed')
+  if not _write_panel(b''.join(_record(command) for command in PANEL_FIX_SEQUENCE)):
+    cloudlog.error('panel black floor fix: mipi command write failed')
     return False
 
   # re-emit the DCS brightness write so the panel's brightness state matches sysfs again
   if brightness > 0:
-    try:
-      (BACKLIGHT / 'brightness').write_text('1')
-      time.sleep(0.1)
-      (BACKLIGHT / 'brightness').write_text(str(brightness))
-    except Exception:
-      pass
+    _set_brightness('1')
+    time.sleep(0.1)
+    _set_brightness(str(brightness))
 
   return True
