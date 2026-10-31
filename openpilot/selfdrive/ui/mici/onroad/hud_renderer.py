@@ -207,10 +207,10 @@ class HudRenderer(Widget):
     for i, ch in enumerate(text):
       gi = rl.get_glyph_info(font, ord(ch))
       if i == 0:
-        start = gi.offset_x
+        start = gi.offsetX  # pyray GlyphInfo fields are camelCase
       if i == len(text) - 1:
-        end = adv + gi.offset_x + gi.width
-      adv += gi.advance_x
+        end = adv + gi.offsetX + gi.image.width
+      adv += gi.advanceX
     return start, end
 
   def _draw_current_speed(self, rect: rl.Rectangle) -> None:
