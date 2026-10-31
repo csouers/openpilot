@@ -310,8 +310,12 @@ class Device:
     self._offroad_brightness: int = BACKLIGHT_OFFROAD
     self._last_brightness: int = 0
     self._brightness_filter = FirstOrderFilter(BACKLIGHT_OFFROAD, 10.00, 1 / gui_app.target_fps)
-    self._night_ramp_value: float = BACKLIGHT_OFFROAD
+    self._ramp_value: float = BACKLIGHT_OFFROAD
+    self._ramp_from: float = BACKLIGHT_OFFROAD
+    self._ramp_target: float | None = None
+    self._ramp_end_ts: float = 0.0
     self._night_followed_prev: bool = False
+    self._night_exit_ramp: bool = False
     self._brightness_thread: threading.Thread | None = None
     self._brightness_event = threading.Event()
     self._brightness_target: int = 0
@@ -373,6 +377,21 @@ class Device:
     return float(np.interp(step, [1, ILLUMINATION_MAX_STEP - 1],
                            [floor, ceiling * ILLUMINATION_STEP_BELOW_TOP]))
 
+  def _ramp_step_toward(self, target: float) -> float:
+    """Linearly move the applied brightness toward target, arriving NIGHT_RAMP_TIME after the
+    target last changed (a naive per-frame delta chase is exponential and never really lands)."""
+    now = time.monotonic()
+    if target != self._ramp_target:
+      self._ramp_from = self._ramp_value
+      self._ramp_target = target
+      self._ramp_end_ts = now + NIGHT_RAMP_TIME
+    elif now >= self._ramp_end_ts:
+      self._ramp_value = target  # ramp complete: snap so the last frame isn't left short
+      return self._ramp_value
+    frac = min(max(1.0 - (self._ramp_end_ts - now) / NIGHT_RAMP_TIME, 0.0), 1.0)
+    self._ramp_value = self._ramp_from + (target - self._ramp_from) * frac
+    return self._ramp_value
+
   def _update_brightness(self):
     clipped_brightness = self._offroad_brightness
 
@@ -407,18 +426,27 @@ class Device:
       dash_brightness = self._night_brightness(body.step)
       target = dash_brightness * (1 - NIGHT_SENSOR_WEIGHT) + clipped_brightness * NIGHT_SENSOR_WEIGHT
       target = min(max(target + ui_state.night_brightness_offset, 1), 100)
+      self._brightness_filter.x = clipped_brightness
       if not self._night_followed_prev:
         # entering night mode: start the ramp from what's actually on screen
-        self._night_ramp_value = self._last_brightness if self._last_brightness > 0 else self._brightness_filter.x
-      ramp_step = (target - self._night_ramp_value) / (NIGHT_RAMP_TIME * gui_app.target_fps)
-      self._night_ramp_value += ramp_step
-      self._night_ramp_value = min(self._night_ramp_value, target) if ramp_step > 0 else max(self._night_ramp_value, target)
-      brightness = round(self._night_ramp_value)
-      self._brightness_filter.x = clipped_brightness
+        self._ramp_value = float(self._last_brightness) if self._last_brightness > 0 else self._brightness_filter.x
       self._night_followed_prev = True
+      self._night_exit_ramp = False
+      brightness = round(self._ramp_step_toward(target))
+    elif self._night_followed_prev or self._night_exit_ramp:
+      if self._night_followed_prev:
+        # just left night mode: start ramping back up to the stock curve instead of jumping
+        self._ramp_value = float(self._last_brightness) if self._last_brightness > 0 else self._brightness_filter.x
+        self._night_followed_prev = False
+        self._night_exit_ramp = True
+      stock_target = min(max(clipped_brightness, 1), 100)
+      brightness = round(self._ramp_step_toward(stock_target))
+      if abs(stock_target - self._ramp_value) < 1.0 or time.monotonic() >= self._ramp_end_ts:
+        # ramp done (or drift made it stall): hand the stock filter the value on screen
+        self._brightness_filter.x = self._ramp_value
+        self._night_exit_ramp = False
     else:
       brightness = round(self._brightness_filter.update(clipped_brightness))
-      self._night_followed_prev = False
 
     if not self._awake:
       brightness = 0
