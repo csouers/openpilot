@@ -19,6 +19,8 @@ MIN_DRAW_DISTANCE = 10.0
 MAX_DRAW_DISTANCE = 100.0
 LEAD_BAR_LENGTH = 24.0  # px
 LEAD_BAR_WIDTH = 5.4  # m (3x the original 1.8, spans the lane behind the target)
+ROAD_EDGE_WIDTH = 0.08  # narrower than the 0.16 lane-line width factor
+ROAD_EDGE_COLOR = rl.Color(255, 0, 21, 255)  # same red as critical alerts
 
 STOCK_PATH_GRADIENT = Gradient(
   start=(0.0, 1.0),
@@ -206,9 +208,9 @@ class ModelRenderer(Widget):
         lane_line.raw_points, line_width_factor * self._lane_line_probs[i], 0.0, max_idx
       )
 
-    # Update road edges using raw points
+    # Update road edges using raw points (narrower than lane lines)
     for road_edge in self._road_edges:
-      road_edge.projected_points = self._map_line_to_polygon(road_edge.raw_points, line_width_factor, 0.0, max_idx)
+      road_edge.projected_points = self._map_line_to_polygon(road_edge.raw_points, ROAD_EDGE_WIDTH, 0.0, max_idx)
 
     # Update path using raw points
     if lead and lead.present:
@@ -301,9 +303,7 @@ class ModelRenderer(Widget):
       if road_edge.projected_points.size == 0:
         continue
 
-      # if closest lane lines are not confident, make road edges green
-      color = self._get_ll_color(float(1.0 - self._road_edge_stds[i]), float(self._lane_line_probs[i + 1]) < 0.25, i == 0)
-      draw_polygon(self._rect, road_edge.projected_points + offset, color)
+      draw_polygon(self._rect, road_edge.projected_points + offset, ROAD_EDGE_COLOR)
 
   def _draw_path(self):
     if not self._path.projected_points.size:
