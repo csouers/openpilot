@@ -125,7 +125,7 @@ class HudRenderer(Widget):
 
     self._draw_model_source(rect)
 
-    # self._draw_steering_wheel(rect)
+    self._draw_steering_wheel(rect)
 
   def _draw_model_source(self, rect: rl.Rectangle) -> None:
     loading = ui_state.chestnut_state == ChestnutState.LOADING
@@ -176,8 +176,8 @@ class HudRenderer(Widget):
     dest_rect = rl.Rectangle(pos_x, pos_y, wheel_txt.width, wheel_txt.height)
     origin = (wheel_txt.width / 2, wheel_txt.height / 2)
 
-    # color and draw
-    color = rl.Color(255, 255, 255, int(self._wheel_alpha_filter.x))
+    # color and draw: blue for the normal wheel, untouched for the critical state
+    color = rl.WHITE if self._show_wheel_critical else rl.Color(0, 145, 255, int(self._wheel_alpha_filter.x))
     rl.draw_texture_pro(wheel_txt, src_rect, dest_rect, origin, rotation, color)
 
     if self._show_wheel_critical:
