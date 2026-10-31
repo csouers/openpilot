@@ -168,9 +168,6 @@ class Controls:
     hudControl.lanesVisible = CC.enabled
     hudControl.leadVisible = self.sm['longitudinalPlan'].hasLead
     if self.CP.brand == "honda":
-      # Honda ACC HUD (CAN only): never send the set-speed number — CRUISE_SPEED=255 "no_speed"
-      # while cruising; hondacan.create_acc_hud still sends 252 "stopped" dashes when braking.
-      hudControl.speedVisible = False
       # Solid lead car only when the main lead is radar-fixed; otherwise the dashed ghost car.
       hudControl.leadVisible = self.sm['radarState'].leadOne.radar
     hudControl.leadDistanceBars = self.sm['selfdriveState'].personality.raw + 1
