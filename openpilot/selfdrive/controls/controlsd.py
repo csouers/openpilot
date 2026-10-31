@@ -40,7 +40,7 @@ class Controls:
 
     self.sm = messaging.SubMaster(['lateralDelay', 'vehicleParameters', 'lateralTorqueParameters', 'modelV2', 'selfdriveState',
                                    'extrinsicsCalibration', 'deviceMotion', 'longitudinalPlan', 'lateralManeuverPlan', 'carState', 'carOutput',
-                                   'driverMonitoringState', 'onroadEvents', 'driverAssistance'], poll='selfdriveState')
+                                   'driverMonitoringState', 'onroadEvents', 'driverAssistance', 'radarState'], poll='selfdriveState')
     self.pm = messaging.PubMaster(['carControl', 'controlsState'])
 
     self.steer_limited_by_safety = False
@@ -167,6 +167,12 @@ class Controls:
     hudControl.speedVisible = CC.enabled
     hudControl.lanesVisible = CC.enabled
     hudControl.leadVisible = self.sm['longitudinalPlan'].hasLead
+    if self.CP.brand == "honda":
+      # Honda ACC HUD (CAN only): never send the set-speed number — CRUISE_SPEED=255 "no_speed"
+      # while cruising; hondacan.create_acc_hud still sends 252 "stopped" dashes when braking.
+      hudControl.speedVisible = False
+      # Solid lead car only when the main lead is radar-fixed; otherwise the dashed ghost car.
+      hudControl.leadVisible = self.sm['radarState'].leadOne.radar
     hudControl.leadDistanceBars = self.sm['selfdriveState'].personality.raw + 1
     hudControl.visualAlert = self.sm['selfdriveState'].alertHudVisual
     hudControl.e2e = self.sm['selfdriveState'].experimentalMode
