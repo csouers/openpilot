@@ -309,6 +309,7 @@ class AugmentedRoadView(CameraView):
     if show_navigation:
       self._navigation.render(rl.Rectangle(self._content_rect.x + self._content_rect.width, self.rect.y, PANEL_WIDTH, self.rect.height))
     else:
+      self._status_icons.set_alert_present(alert_to_render is not None)
       self._status_icons.render(self.rect)
       # self._confidence_ball.render(self.rect)
 

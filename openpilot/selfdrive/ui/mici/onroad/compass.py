@@ -29,7 +29,11 @@ class Compass(Widget):
     self._demo_heading = demo_heading
     self._heading = 0.0
     self._has_heading = demo_heading is not None
+    self._suppressed = False  # hidden while something (an alert banner) covers this corner
     self._alpha_filter = FirstOrderFilter(0.0, 0.4, 1 / gui_app.target_fps)
+
+  def set_suppressed(self, suppressed: bool):
+    self._suppressed = suppressed
 
   def cardinal(self) -> str:
     return CARDINALS[int(((self._heading + 22.5) % 360.0) // 45.0)]
@@ -43,7 +47,10 @@ class Compass(Widget):
       self._has_heading = True
       self._heading = (self._heading + wrap180(heading - self._heading) * HEADING_SMOOTHING) % 360.0
 
-    self._alpha_filter.update(1.0 if self._has_heading else 0.0)
+    # fade in gently, but get out of the way fast when an alert banner comes up
+    target = 1.0 if (self._has_heading and not self._suppressed) else 0.0
+    self._alpha_filter.update_alpha(0.1 if target < self._alpha_filter.x else 0.4)
+    self._alpha_filter.update(target)
 
   def _gps_heading(self) -> float | None:
     sm = ui_state.sm

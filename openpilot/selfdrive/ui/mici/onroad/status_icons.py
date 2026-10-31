@@ -27,6 +27,10 @@ class StatusIconColumn(Widget):
 
     self._experimental_mode = False
 
+  def set_alert_present(self, alert_present: bool):
+    # an alert banner draws across the top of the screen and would cover the compass
+    self._compass.set_suppressed(alert_present)
+
   def _update_state(self):
     sm = ui_state.sm
     self._experimental_mode = (sm.alive["selfdriveState"] and sm.valid["selfdriveState"] and
