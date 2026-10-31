@@ -238,7 +238,7 @@ class RadarD:
         else:
           self.lead_prob_filters[i].update(lead_prob)
 
-      self.radar_state.leadOne = get_lead(self.v_ego, self.ready, self.tracks, leads_v3[0], model_v_ego, self.lead_prob_filters[0].x, low_speed_override=False)
+      self.radar_state.leadOne = get_lead(self.v_ego, self.ready, self.tracks, leads_v3[0], model_v_ego, self.lead_prob_filters[0].x, low_speed_override=True)
       self.radar_state.leadTwo = get_lead(self.v_ego, self.ready, self.tracks, leads_v3[1], model_v_ego, self.lead_prob_filters[1].x, low_speed_override=False)
 
   def publish(self, pm: messaging.PubMaster):
