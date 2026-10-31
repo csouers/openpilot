@@ -29,7 +29,7 @@ STEER_PATH_HALF_WIDTH = 0.15  # m, half-width of the drawn line
 STEER_PATH_RATIO = 15.3  # steering ratio fallback when CP isn't up yet
 STEER_PATH_WHEELBASE = 2.67  # m, fallback
 STEER_PATH_SLIP = 0.0014
-STEER_PATH_COLOR = rl.Color(0, 0, 255, 128)  # the original nvgRGBA(0, 0, 255, 128)
+STEER_PATH_COLOR = rl.Color(0, 0, 255, 255)  # solid blue (was the neo-era 50% alpha, too faint on mici)
 
 STOCK_PATH_GRADIENT = Gradient(
   start=(0.0, 1.0),
