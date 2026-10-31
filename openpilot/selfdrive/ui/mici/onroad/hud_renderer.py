@@ -156,16 +156,13 @@ class HudRenderer(Widget):
   def _draw_steering_wheel(self, rect: rl.Rectangle) -> None:
     wheel_txt = self._txt_wheel_critical if self._show_wheel_critical else self._txt_wheel
 
+    # always visible (steering-angle readout), engaged or not; only the critical state changes look
     if self._show_wheel_critical:
       self._wheel_alpha_filter.update(255)
       self._wheel_y_filter.update(0)
     else:
-      if ui_state.status == UIStatus.DISENGAGED:
-        self._wheel_alpha_filter.update(0)
-        self._wheel_y_filter.update(wheel_txt.height / 2)
-      else:
-        self._wheel_alpha_filter.update(255 * 0.9)
-        self._wheel_y_filter.update(0)
+      self._wheel_alpha_filter.update(255 * 0.9)
+      self._wheel_y_filter.update(0)
 
     # pos
     pos_x = int(rect.x + 21 + wheel_txt.width / 2)
