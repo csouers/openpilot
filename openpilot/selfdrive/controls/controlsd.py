@@ -168,8 +168,11 @@ class Controls:
     hudControl.lanesVisible = CC.enabled
     hudControl.leadVisible = self.sm['longitudinalPlan'].hasLead
     if self.CP.brand == "honda":
-      # Solid lead car only when the main lead is radar-fixed; otherwise the dashed ghost car.
-      hudControl.leadVisible = self.sm['radarState'].leadOne.radar
+      # Honda ACC icon: solid lead car only when the main lead is radar-fixed;
+      # dashed ghost car for a vision-only lead; no car at all when there is no lead.
+      lead = self.sm['radarState'].leadOne
+      hudControl.leadVisible = lead.radar
+      hudControl.leadPresent = bool(lead.present)
     hudControl.leadDistanceBars = self.sm['selfdriveState'].personality.raw + 1
     hudControl.visualAlert = self.sm['selfdriveState'].alertHudVisual
     hudControl.e2e = self.sm['selfdriveState'].experimentalMode
