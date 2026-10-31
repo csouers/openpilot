@@ -28,6 +28,9 @@ ILLUMINATION_STEP_BELOW_TOP = 0.6  # fraction of the ceiling at (max - 1)
 # the camera light sensor still contributes this much when the car's dimmer is in charge, so a daylight
 # dimming (rain/tunnel) doesn't leave the screen unusably dark and a night floor isn't pitch black
 NIGHT_SENSOR_WEIGHT = 0.25
+# night brightness changes (detent steps and sensor drift) ramp over this many seconds instead of
+# stepping instantly — a quick visible fade, not the 10 s ambient-filter smear and not a jump
+NIGHT_RAMP_TIME = 1.0
 
 
 class UIStatus(Enum):
@@ -307,6 +310,8 @@ class Device:
     self._offroad_brightness: int = BACKLIGHT_OFFROAD
     self._last_brightness: int = 0
     self._brightness_filter = FirstOrderFilter(BACKLIGHT_OFFROAD, 10.00, 1 / gui_app.target_fps)
+    self._night_ramp_value: float = BACKLIGHT_OFFROAD
+    self._night_followed_prev: bool = False
     self._brightness_thread: threading.Thread | None = None
     self._brightness_event = threading.Event()
     self._brightness_target: int = 0
@@ -396,14 +401,24 @@ class Device:
     body = self._illumination
     night_followed = body.seen and not body.daylight_override and body.parking_lights_on and 1 <= body.step < ILLUMINATION_MAX_STEP
     if night_followed:
-      # the dash steps are discrete detents, so follow them immediately instead of through the slow
-      # ambient filter (10 s) that would smear every step into one
+      # the dash steps are discrete detents, so follow them directly instead of through the slow
+      # ambient filter (10 s) that would smear every step into one — but ramp over NIGHT_RAMP_TIME
+      # so each detent change is a quick fade rather than a jump
       dash_brightness = self._night_brightness(body.step)
       target = dash_brightness * (1 - NIGHT_SENSOR_WEIGHT) + clipped_brightness * NIGHT_SENSOR_WEIGHT
-      brightness = round(min(max(target + ui_state.night_brightness_offset, 1), 100))
+      target = min(max(target + ui_state.night_brightness_offset, 1), 100)
+      if not self._night_followed_prev:
+        # entering night mode: start the ramp from what's actually on screen
+        self._night_ramp_value = self._last_brightness if self._last_brightness > 0 else self._brightness_filter.x
+      ramp_step = (target - self._night_ramp_value) / (NIGHT_RAMP_TIME * gui_app.target_fps)
+      self._night_ramp_value += ramp_step
+      self._night_ramp_value = min(self._night_ramp_value, target) if ramp_step > 0 else max(self._night_ramp_value, target)
+      brightness = round(self._night_ramp_value)
       self._brightness_filter.x = clipped_brightness
+      self._night_followed_prev = True
     else:
       brightness = round(self._brightness_filter.update(clipped_brightness))
+      self._night_followed_prev = False
 
     if not self._awake:
       brightness = 0
