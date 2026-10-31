@@ -122,8 +122,8 @@ class UIState:
     self.CP: car.CarParams | None = None
     self.light_sensor: float = -1.0
     self.night_brightness_offset: int = 0
-    self.night_brightness_max: int = 40
-    self.night_brightness_min: int = 4
+    self.night_brightness_max: int = 60
+    self.night_brightness_min: int = 10
 
     self._params_thread: threading.Thread | None = None
 
