@@ -54,7 +54,7 @@ def _write_panel(data: bytes) -> bool:
   # it parses one or more length-prefixed records out of a single write.
   try:
     ret = subprocess.run(['sudo', '-n', 'tee', str(PANEL_CMD)], input=data,
-                         stdout=subprocess.DEVNULL, capture_output=True, timeout=5)
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5)
     return ret.returncode == 0
   except Exception:
     return False
@@ -71,7 +71,7 @@ def _brightness() -> int:
 def _set_brightness(value: str) -> None:
   try:
     subprocess.run(['sudo', '-n', 'tee', str(BACKLIGHT / 'brightness')], input=value.encode(),
-                   stdout=subprocess.DEVNULL, capture_output=True, timeout=5)
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5)
   except Exception:
     pass
 
