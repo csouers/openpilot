@@ -30,7 +30,7 @@ ILLUMINATION_STEP_BELOW_TOP = 0.6  # fraction of the ceiling at (max - 1)
 NIGHT_SENSOR_WEIGHT = 0.25
 # night brightness changes (detent steps and sensor drift) ramp over this many seconds instead of
 # stepping instantly — a quick visible fade, not the 10 s ambient-filter smear and not a jump
-NIGHT_RAMP_TIME = 1.0
+NIGHT_RAMP_TIME = 0.5
 
 
 class UIStatus(Enum):
