@@ -12,7 +12,7 @@ STATUS_ICONS_HEIGHT = 116
 # the experimental icon right below it
 COMPASS_W = 80
 COMPASS_H = 52
-COMPASS_MARGIN_TOP = 2
+COMPASS_MARGIN_TOP = 11  # matches the alert text1 top offset
 COMPASS_MARGIN_RIGHT = 4
 
 

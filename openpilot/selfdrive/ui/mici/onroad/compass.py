@@ -9,7 +9,7 @@ from openpilot.system.ui.widgets.label import UnifiedLabel
 # rough heading smoothing (shortest-path, per frame)
 HEADING_SMOOTHING = 0.2
 MIN_HEADING_SPEED = 0.3  # m/s, below this the GPS heading is noise
-CARDINALS = ("N", "NE", "E", "SE", "S", "SW", "W", "NW")  # 8 point, at most two letters
+CARDINALS = ("n", "ne", "e", "se", "s", "sw", "w", "nw")  # 8 point, lowercase to match the branding
 FONT_SIZE = 56
 
 

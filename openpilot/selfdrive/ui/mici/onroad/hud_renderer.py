@@ -125,8 +125,6 @@ class HudRenderer(Widget):
 
     self._draw_model_source(rect)
 
-    self._draw_steering_wheel(rect)
-
   def _draw_model_source(self, rect: rl.Rectangle) -> None:
     loading = ui_state.chestnut_state == ChestnutState.LOADING
     if loading:
@@ -152,37 +150,6 @@ class HudRenderer(Widget):
     pos = rl.Vector2(rect.x + rect.width - 10 - icon.width,
                      rect.y + rect.height - 14 - (self._txt_wheel.height + icon.height) / 2)
     rl.draw_texture_ex(icon, pos, 0.0, 1.0, rl.Color(255, 255, 255, int(255 * opacity * alpha)))
-
-  def _draw_steering_wheel(self, rect: rl.Rectangle) -> None:
-    wheel_txt = self._txt_wheel_critical if self._show_wheel_critical else self._txt_wheel
-
-    # always visible (steering-angle readout), engaged or not; only the critical state changes look
-    if self._show_wheel_critical:
-      self._wheel_alpha_filter.update(255)
-      self._wheel_y_filter.update(0)
-    else:
-      self._wheel_alpha_filter.update(255 * 0.9)
-      self._wheel_y_filter.update(0)
-
-    # pos
-    pos_x = int(rect.x + 21 + wheel_txt.width / 2)
-    pos_y = int(rect.y + rect.height - 14 - wheel_txt.height / 2 + self._wheel_y_filter.x)
-    rotation = -ui_state.sm['carState'].steeringAngleDeg
-
-    src_rect = rl.Rectangle(0, 0, wheel_txt.width, wheel_txt.height)
-    dest_rect = rl.Rectangle(pos_x, pos_y, wheel_txt.width, wheel_txt.height)
-    origin = (wheel_txt.width / 2, wheel_txt.height / 2)
-
-    # color and draw: blue for the normal wheel, untouched for the critical state
-    color = rl.WHITE if self._show_wheel_critical else rl.Color(0, 145, 255, int(self._wheel_alpha_filter.x))
-    rl.draw_texture_pro(wheel_txt, src_rect, dest_rect, origin, rotation, color)
-
-    if self._show_wheel_critical:
-      # Draw exclamation point icon
-      EXCLAMATION_POINT_SPACING = 10
-      exclamation_pos_x = pos_x - self._txt_exclamation_point.width / 2 + wheel_txt.width / 2 + EXCLAMATION_POINT_SPACING
-      exclamation_pos_y = pos_y - self._txt_exclamation_point.height / 2
-      rl.draw_texture_ex(self._txt_exclamation_point, rl.Vector2(exclamation_pos_x, exclamation_pos_y), 0.0, 1.0, rl.WHITE)
 
   def _draw_set_speed(self, rect: rl.Rectangle) -> None:
     """Draw the MAX speed indicator box."""
@@ -217,7 +184,7 @@ class HudRenderer(Widget):
       set_speed_color,
     )
 
-    max_text = tr("MAX")
+    max_text = tr("max")
     set_speed_width = measure_text_cached(self._font_display, set_speed_text, FONT_SIZES.set_speed).x
     max_width = measure_text_cached(self._font_semi_bold, max_text, FONT_SIZES.max_speed).x
     rl.draw_text_ex(
