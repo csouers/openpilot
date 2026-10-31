@@ -338,11 +338,17 @@ class ModelRenderer(Widget):
     wheel_base = cp.wheelbase if cp else STEER_PATH_WHEELBASE
 
     angle_rad = cs.steeringAngleDeg * np.pi / 180.0
-    curvature = angle_rad / (steer_ratio * wheel_base * (1.0 + STEER_PATH_SLIP * cs.vEgo ** 2))
+    # carState angle is left-positive, but this car space is right-positive (see the lead bar's -y_rel)
+    curvature = -angle_rad / (steer_ratio * wheel_base * (1.0 + STEER_PATH_SLIP * cs.vEgo ** 2))
 
     x = np.arange(STEER_PATH_POINTS, dtype=np.float32)
     y = x * np.tan(np.arcsin(np.clip(x * curvature, -0.999, 0.999)) / 2.0)
-    line = np.column_stack((x, y, np.zeros(STEER_PATH_POINTS, dtype=np.float32)))
+    # sit on the model's road plane: z is effectively depth in this projection, z=0 lands on the horizon
+    path = self._path.raw_points
+    if path.shape[0] < 2:
+      return
+    z = np.interp(x, path[:, 0], path[:, 2]) + self._path_offset_z
+    line = np.column_stack((x, y, z))
 
     pts = self._map_line_to_polygon(line, STEER_PATH_HALF_WIDTH, 0.0, STEER_PATH_POINTS - 1)
     if pts.size == 0:
