@@ -18,6 +18,7 @@ from openpilot.common.params import Params
 from openpilot.common.realtime import DT_HW
 from openpilot.selfdrive.selfdrived.alertmanager import set_offroad_alert
 from openpilot.common.hardware import HARDWARE, COMMA_HARDWARE, PC
+from openpilot.common.hardware.comma.oled import fix_panel_black_floor
 from openpilot.common.basedir import BASEDIR
 from openpilot.common.git import get_short_branch
 from openpilot.common.hardware.usb import CHESTNUT_FW_VERSION, CHESTNUT_USB_PRODUCT, get_usb_state, get_usb_topology, is_chestnut_usb_id, set_usb_state
@@ -246,6 +247,15 @@ def hardware_thread(end_event, hw_queue) -> None:
   last_uptime_ts: float = time.monotonic()
 
   HARDWARE.initialize_hardware()
+
+  # the panel's black-level registers are reset by the bootloader on every boot
+  if COMMA_HARDWARE:
+    try:
+      if fix_panel_black_floor():
+        cloudlog.info("applied panel black floor fix")
+    except Exception:
+      cloudlog.exception("panel black floor fix")
+
   thermal_config = HARDWARE.get_thermal_config()
 
   fan_controller = FanController(int(1./DT_HW))
