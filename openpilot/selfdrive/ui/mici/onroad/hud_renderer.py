@@ -175,43 +175,30 @@ class HudRenderer(Widget):
       set_speed *= KM_TO_MILE
 
     set_speed_text = CRUISE_DISABLED_CHAR if not self.is_cruise_set else str(round(set_speed))
+    set_speed_width = measure_text_cached(self._font_display, set_speed_text, FONT_SIZES.set_speed).x
+
+    # both the number and the label share one center axis (the glow circle's center), so they
+    # stay aligned regardless of glyph metrics — including the en dash used when cruise is off
+    center_x = x + circle_radius
     rl.draw_text_ex(
       self._font_display,
       set_speed_text,
-      rl.Vector2(x + 13 + 4, y + 3 - 8 - 3 + 4),
+      rl.Vector2(center_x - set_speed_width / 2, y + 3 - 8 - 3 + 4),
       FONT_SIZES.set_speed,
       0,
       set_speed_color,
     )
 
     max_text = tr("max")
-    set_speed_width = measure_text_cached(self._font_display, set_speed_text, FONT_SIZES.set_speed).x
     max_width = measure_text_cached(self._font_semi_bold, max_text, FONT_SIZES.max_speed).x
-    # center 'max' on the number's visible ink, not its advance box (display glyphs are off-center)
-    ink_left, ink_right = self._ink_span(self._font_display, set_speed_text)
-    ink_center = x + 17 + (ink_left + ink_right) / 2
     rl.draw_text_ex(
       self._font_semi_bold,
       max_text,
-      rl.Vector2(ink_center - max_width / 2, y + FONT_SIZES.set_speed - 7 + 4),
+      rl.Vector2(center_x - max_width / 2, y + FONT_SIZES.set_speed - 7 + 4),
       FONT_SIZES.max_speed,
       0,
       max_color,
     )
-
-  @staticmethod
-  def _ink_span(font: rl.Font, text: str) -> tuple[float, float]:
-    """Start and end (px) of the drawn ink inside a text's advance box."""
-    adv = 0.0
-    start = end = 0.0
-    for i, ch in enumerate(text):
-      gi = rl.get_glyph_info(font, ord(ch))
-      if i == 0:
-        start = gi.offsetX  # pyray GlyphInfo fields are camelCase
-      if i == len(text) - 1:
-        end = adv + gi.offsetX + gi.image.width
-      adv += gi.advanceX
-    return start, end
 
   def _draw_current_speed(self, rect: rl.Rectangle) -> None:
     """Draw the current vehicle speed and unit."""
