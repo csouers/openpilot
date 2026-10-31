@@ -18,7 +18,7 @@ CLIP_MARGIN = 500
 MIN_DRAW_DISTANCE = 10.0
 MAX_DRAW_DISTANCE = 100.0
 LEAD_BAR_LENGTH = 24.0  # px
-LEAD_BAR_WIDTH = 1.8  # m
+LEAD_BAR_WIDTH = 5.4  # m (3x the original 1.8, spans the lane behind the target)
 
 STOCK_PATH_GRADIENT = Gradient(
   start=(0.0, 1.0),
@@ -321,9 +321,10 @@ class ModelRenderer(Widget):
       draw_polygon(self._rect, path_pts, rl.Color(255, 255, 255, 30))
 
   def _draw_lead_indicator(self):
+    # green to match the other engaged-green elements (lane lines, path)
     offset = np.array([self._rect.x, self._rect.y], dtype=np.float32)
     for lead in self._lead_vehicles:
-      draw_polygon(self._rect, lead.bar + offset, rl.Color(255, 255, 255, int(255 * lead.fade_filter.x)))
+      draw_polygon(self._rect, lead.bar + offset, rl.Color(0, 255, 64, int(255 * lead.fade_filter.x)))
 
   @staticmethod
   def _get_path_length_idx(pos_x_array: np.ndarray, path_height: float) -> int:
