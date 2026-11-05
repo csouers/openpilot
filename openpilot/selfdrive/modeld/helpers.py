@@ -60,5 +60,6 @@ def chestnut_expected(timeout: float = CHESTNUT_ENUMERATION_GRACE) -> bool:
 
 def chestnut_compiled() -> bool:
   path = modeld_pkl_path(chestnut=True)
-  return path.is_file() and all(
+  # the big model is only built for releases, in a dev checkout it's a git LFS pointer
+  return path.is_file() and path.stat().st_size > 1024 and all(
     (MODELS_DIR / f'big_driving_warp_{size}_tinygrad.pkl').is_file() for size in ('1344x760', '1928x1208'))

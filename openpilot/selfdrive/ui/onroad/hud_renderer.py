@@ -1,4 +1,4 @@
-import pyray as rl
+import raylib_nb as rl
 from dataclasses import dataclass
 from openpilot.common.constants import CV
 from openpilot.selfdrive.ui.ui_state import ui_state, UIStatus
@@ -36,9 +36,6 @@ class Colors:
   DISENGAGED = rl.Color(145, 155, 149, 255)
   OVERRIDE = rl.Color(145, 155, 149, 255)  # Added
   ENGAGED = rl.Color(128, 216, 166, 255)
-  DISENGAGED_BG = rl.Color(0, 0, 0, 153)
-  OVERRIDE_BG = rl.Color(145, 155, 149, 204)
-  ENGAGED_BG = rl.Color(128, 216, 166, 204)
   GREY = rl.Color(166, 166, 166, 255)
   DARK_GREY = rl.Color(114, 114, 114, 255)
   BLACK_TRANSLUCENT = rl.Color(0, 0, 0, 166)
@@ -81,13 +78,12 @@ class HudRenderer(Widget):
     if sm.recv_frame['selfdriveState'] >= ui_state.started_frame:
       self._experimental_mode = bool(sm['selfdriveState'].experimentalMode)
 
-    controls_state = sm['controlsState']
     car_state = sm['carState']
 
+    # the cluster value is what the car actually shows; fall back to the controller's set speed
+    # when the car doesn't report one (upstream dropped this fallback)
     v_cruise_cluster = car_state.vCruiseCluster
-    self.set_speed = (
-      controls_state.deprecated.vCruise if v_cruise_cluster == 0.0 else v_cruise_cluster
-    )
+    self.set_speed = sm['controlsState'].deprecated.vCruise if v_cruise_cluster == 0.0 else v_cruise_cluster
     self.is_cruise_set = 0 < self.set_speed < SET_SPEED_NA
     self.is_cruise_available = self.set_speed != -1
 

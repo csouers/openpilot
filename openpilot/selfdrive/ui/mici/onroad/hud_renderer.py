@@ -1,9 +1,9 @@
 import math
-import pyray as rl
+import raylib_nb as rl
 from dataclasses import dataclass
 from openpilot.common.constants import CV
 from openpilot.selfdrive.ui.mici.onroad.torque_bar import TorqueBar
-from openpilot.selfdrive.ui.ui_state import ui_state, UIStatus, ChestnutState
+from openpilot.selfdrive.ui.ui_state import ui_state, ChestnutState
 from openpilot.system.ui.lib.application import gui_app, FontWeight
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.lib.text_measure import measure_text_cached
@@ -93,13 +93,12 @@ class HudRenderer(Widget):
       self.speed = 0.0
       return
 
-    controls_state = sm['controlsState']
     car_state = sm['carState']
 
+    # the cluster value is what the car actually shows; fall back to the controller's set speed
+    # when the car doesn't report one (upstream dropped this fallback)
     v_cruise_cluster = car_state.vCruiseCluster
-    set_speed = (
-      controls_state.deprecated.vCruise if v_cruise_cluster == 0.0 else v_cruise_cluster
-    )
+    set_speed = sm['controlsState'].deprecated.vCruise if v_cruise_cluster == 0.0 else v_cruise_cluster
     engaged = sm['selfdriveState'].enabled
     if (set_speed != self.set_speed and engaged) or (engaged and not self._engaged):
       self._set_speed_changed_time = rl.get_time()

@@ -9,6 +9,7 @@ USB_DEVICES_PATH = Path("/sys/bus/usb/devices")
 TYPEC_CC_ORIENTATION_PATH = Path("/sys/class/power_supply/usb/typec_cc_orientation")
 TYPEC_MODE_PATH = Path("/sys/class/power_supply/usb/typec_mode")
 TYPEC_MODE_UNATTACHED = "Nothing attached"
+UDC_PATH = Path("/sys/class/udc")
 PRIMARY_USB_CONTROLLER = "a600000.ssusb"
 # the Type-C CC pin reports an attach before the device behind it enumerates; a real chestnut shows
 # up in well under a second, so this is how long a cable may look like a GPU before we stop waiting
@@ -50,6 +51,15 @@ def cable_connected() -> bool:
   if mode is None:
     return read_int(TYPEC_CC_ORIENTATION_PATH) != 0
   return mode != TYPEC_MODE_UNATTACHED
+
+
+def usb_host_connected() -> bool:
+  """Whether a USB host, e.g. a PC with adb or the UP in CI, is on the USB-C port, also while it has suspended this device.
+  A chestnut is a USB device, so then it isn't on that port."""
+  try:
+    return any(read(p) not in (None, "not attached") for p in UDC_PATH.glob("*/state"))
+  except OSError:
+    return False
 
 
 def usb_devices() -> list[Path]:

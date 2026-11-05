@@ -1,22 +1,18 @@
 import colorsys
 import numpy as np
-import pyray as rl
-from openpilot.cereal import log, messaging
-from opendbc.car.structs import car
-from dataclasses import dataclass, field
-from openpilot.common.params import Params
+import raylib_nb as rl
+from openpilot.cereal import log
 from openpilot.common.filter_simple import FirstOrderFilter
 from openpilot.selfdrive.controls.radard import RADAR_TO_CAMERA
 from openpilot.selfdrive.locationd.calibrationd import HEIGHT_INIT
 from openpilot.selfdrive.ui.ui_state import ui_state, UIStatus
 from openpilot.selfdrive.ui.mici.onroad import blend_colors
+from openpilot.selfdrive.ui.onroad.model_renderer import (ModelPoints, ModelRenderer as BaseModelRenderer,
+                                                          CLIP_MARGIN, MAX_DRAW_DISTANCE, STOCK_PATH_GRADIENT)
 from openpilot.system.ui.lib.application import gui_app
-from openpilot.system.ui.lib.shader_polygon import draw_polygon, Gradient
-from openpilot.system.ui.widgets import Widget
+from openpilot.system.ui.lib.shader_polygon import draw_polygon
 
-CLIP_MARGIN = 500
 MIN_DRAW_DISTANCE = 10.0
-MAX_DRAW_DISTANCE = 100.0
 LEAD_BAR_LENGTH = 24.0  # px
 LEAD_BAR_WIDTH = 5.4  # m (3x the original 1.8, spans the lane behind the target)
 LEAD_CAR_WIDTH = 2.8  # m, width of the on-road lead car icon (incl. mirrors)
@@ -32,24 +28,11 @@ STEER_PATH_WHEELBASE = 2.67  # m, fallback
 STEER_PATH_SLIP = 0.0014
 STEER_PATH_COLOR = rl.Color(0, 0, 255, 255)  # solid blue (was the neo-era 50% alpha, too faint on mici)
 
-STOCK_PATH_GRADIENT = Gradient(
-  start=(0.0, 1.0),
-  end=(0.0, 0.0),
-  colors=[rl.Color(13, 248, 122, 102), rl.Color(114, 255, 92, 89), rl.Color(114, 255, 92, 0)],
-  stops=[0.0, 0.5, 1.0],
-)
-
 LANE_LINE_COLORS = {
   UIStatus.DISENGAGED: rl.Color(200, 200, 200, 255),
   UIStatus.OVERRIDE: rl.Color(255, 255, 255, 255),
   UIStatus.ENGAGED: rl.Color(0, 255, 64, 255),
 }
-
-
-@dataclass
-class ModelPoints:
-  raw_points: np.ndarray = field(default_factory=lambda: np.empty((0, 3), dtype=np.float32))
-  projected_points: np.ndarray = field(default_factory=lambda: np.empty((0, 2), dtype=np.float32))
 
 
 class LeadVehicle:
@@ -63,7 +46,10 @@ class LeadVehicle:
     self.icon_width = 0.0  # screen px
 
 
-class ModelRenderer(Widget):
+class ModelRenderer(BaseModelRenderer):
+  LANE_LINE_WIDTHS = (0.12, 0.16, 0.16, 0.16)
+  ROAD_EDGE_WIDTH = 0.16
+
   def __init__(self):
     super().__init__()
     self._longitudinal_control = False
@@ -88,26 +74,9 @@ class ModelRenderer(Widget):
 
     self._torque_filter = FirstOrderFilter(0, 0.1, 1 / gui_app.target_fps)
 
-    # 3x3 car space -> rect-origin space (draw methods add rect.x/y)
-    self._car_space_transform = np.zeros((3, 3), dtype=np.float32)
-    self._transform_dirty = True
-    self._clip_region = None
-
-    self._path_gradient = Gradient(
-      start=(0.0, 1.0),  # Bottom of path
-      end=(0.0, 0.0),  # Top of path
-      colors=[],
-      stops=[],
-    )
-
-    # Get longitudinal control setting from car parameters
-    if car_params := Params().get("CarParams"):
-      cp = messaging.log_from_bytes(car_params, car.CarParams)
-      self._longitudinal_control = cp.openpilotLongitudinalControl
-
-  def set_transform(self, transform: np.ndarray):
-    self._car_space_transform = transform.astype(np.float32)
-    self._transform_dirty = True
+  def _draw_offset(self) -> np.ndarray:
+    # car space transform maps to rect-origin space
+    return np.array([self._rect.x, self._rect.y], dtype=np.float32)
 
   def _render(self, rect: rl.Rectangle):
     sm = ui_state.sm
@@ -155,26 +124,12 @@ class ModelRenderer(Widget):
     self._draw_steer_path()
 
     if render_lead_indicator:
-      self._update_leads(sm)
+      self._update_lead_bars(sm)
       self._draw_lead_indicator()
     else:
-      self._lead_vehicles = [LeadVehicle(), LeadVehicle()]
+      self._lead_bars = [LeadVehicle(), LeadVehicle()]
 
-  def _update_raw_points(self, model):
-    """Update raw 3D points from model data"""
-    self._path.raw_points = np.array([model.position.x, model.position.y, model.position.z], dtype=np.float32).T
-
-    for i, lane_line in enumerate(model.laneLines):
-      self._lane_lines[i].raw_points = np.array([lane_line.x, lane_line.y, lane_line.z], dtype=np.float32).T
-
-    for i, road_edge in enumerate(model.roadEdges):
-      self._road_edges[i].raw_points = np.array([road_edge.x, road_edge.y, road_edge.z], dtype=np.float32).T
-
-    self._lane_line_probs = np.array(model.laneLineProbs, dtype=np.float32)
-    self._road_edge_stds = np.array(model.roadEdgeStds, dtype=np.float32)
-    self._acceleration_x = np.array(model.acceleration.x, dtype=np.float32)
-
-  def _update_leads(self, sm):
+  def _update_lead_bars(self, sm):
     plan = sm['longitudinalPlan']
     if plan.longitudinalPlanSource == log.LongitudinalPlan.LongitudinalPlanSource.e2e and len(sm['modelV2'].leadsV3) > 1:
       # e2e leads come from the vision model: never radar-confirmed
@@ -326,7 +281,7 @@ class ModelRenderer(Widget):
 
   def _draw_lane_lines(self):
     """Draw lane lines and road edges. Two closest lines should be green (lane line or road edges)."""
-    offset = np.array([self._rect.x, self._rect.y], dtype=np.float32)
+    offset = self._draw_offset()
 
     for i, lane_line in enumerate(self._lane_lines):
       if lane_line.projected_points.size == 0:
@@ -335,7 +290,7 @@ class ModelRenderer(Widget):
       color = self._get_ll_color(float(self._lane_line_probs[i]), i in (1, 2), i in (0, 1))
       draw_polygon(self._rect, lane_line.projected_points + offset, color)
 
-    for i, road_edge in enumerate(self._road_edges):
+    for road_edge in self._road_edges:
       if road_edge.projected_points.size == 0:
         continue
 
@@ -345,7 +300,7 @@ class ModelRenderer(Widget):
     if not self._path.projected_points.size:
       return
 
-    path_pts = self._path.projected_points + np.array([self._rect.x, self._rect.y], dtype=np.float32)
+    path_pts = self._path.projected_points + self._draw_offset()
 
     # if ui_state.status == UIStatus.DISENGAGED:
     #   draw_polygon(self._rect, path_pts, rl.Color(0, 0, 0, 90))
