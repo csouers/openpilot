@@ -36,6 +36,10 @@ TURN_SIGNAL_BLINK_PERIOD = 1 / (80 / 60)  # Mazda heartbeat turn signal BPM
 # Cars that don't report their actual flasher output get a synthetic blink.
 # Honda's B-CAN lamp state (12f810_Lighting) is used instead when available.
 
+# Arrow next to the lane-change alert text. Hidden: the bottom-corner arrows in
+# turn_signals.py already show the car's actual flasher output.
+SHOW_LANE_CHANGE_TURN_SIGNAL = False
+
 DEBUG = False
 
 
@@ -199,15 +203,20 @@ class AlertRenderer(Widget):
 
     self._last_icon_side = icon_side
 
+    # keep tracking the side (laneChangeBlocked falls back to it) but drop the turn-signal texture
+    if not SHOW_LANE_CHANGE_TURN_SIGNAL and txt_icon in (self._txt_turn_signal_left, self._txt_turn_signal_right):
+      txt_icon = None
+
     # create text rect based on icon presence
     text_x = self._rect.x + ALERT_MARGIN
     text_width = self._rect.width - ALERT_MARGIN
-    if icon_side == 'left':
-      text_x = self._rect.x + self._txt_turn_signal_right.width
-      text_width = self._rect.width - ALERT_MARGIN - self._txt_turn_signal_right.width
-    elif icon_side == 'right':
-      text_x = self._rect.x + ALERT_MARGIN
-      text_width = self._rect.width - ALERT_MARGIN - self._txt_turn_signal_right.width
+    if icon_side is not None and txt_icon is not None:
+      if icon_side == 'left':
+        text_x = self._rect.x + self._txt_turn_signal_right.width
+        text_width = self._rect.width - ALERT_MARGIN - self._txt_turn_signal_right.width
+      elif icon_side == 'right':
+        text_x = self._rect.x + ALERT_MARGIN
+        text_width = self._rect.width - ALERT_MARGIN - self._txt_turn_signal_right.width
 
     text_rect = rl.Rectangle(
       text_x,
