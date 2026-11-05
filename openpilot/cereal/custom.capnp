@@ -20,7 +20,11 @@ struct CarBodyState @0x81c2f05a394cf4af {
   daylightOverride @5 :Bool; # meter keeps screens in day mode despite parking lights (12F85450 byte0 bit7)
 }
 
-struct CustomReserved1 @0xaedffd8f31e7b55d {
+struct RadarTrackClass @0xaedffd8f31e7b55d {
+  # IDs of radar tracks the sensor classifies as vehicles (e.g. Honda/Tesla-radar Bosch
+  # object Class). RadarData.RadarPoint stays upstream-clean; card publishes this from the
+  # radar interface and radard uses it to gate the low-speed lead override.
+  vehicleTrackIds @0 :List(UInt32);
 }
 
 struct CustomReserved2 @0xf35cc4560bbf6ec2 {

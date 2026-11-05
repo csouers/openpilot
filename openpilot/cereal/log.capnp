@@ -2639,7 +2639,7 @@ struct Event {
     # DON'T change the ID (e.g. @107)
     # DON'T change which struct it points to
     carBodyState @107 :Custom.CarBodyState;
-    customReserved1 @108 :Custom.CustomReserved1;
+    radarTrackClass @108 :Custom.RadarTrackClass;
     customReserved2 @109 :Custom.CustomReserved2;
     customReserved3 @110 :Custom.CustomReserved3;
     customReserved4 @111 :Custom.CustomReserved4;

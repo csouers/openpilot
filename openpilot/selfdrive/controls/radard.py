@@ -202,7 +202,9 @@ class RadarD:
       self.v_ego_hist.append(self.v_ego)
       self.last_v_ego_frame = sm.recv_frame['carState']
 
-    ar_pts = {pt.trackId: [pt.dRel, pt.yRel, pt.vRel, pt.vehicle] for pt in rr.points}
+    # sensor-classified tracks arrive out-of-band (car.py publishes radarTrackClass from the radar interface)
+    vehicle_ids = set(sm['radarTrackClass'].vehicleTrackIds) if sm.seen['radarTrackClass'] else set()
+    ar_pts = {pt.trackId: [pt.dRel, pt.yRel, pt.vRel, pt.trackId in vehicle_ids] for pt in rr.points}
 
     # *** remove missing points from meta data ***
     for ids in list(self.tracks.keys()):
@@ -263,7 +265,7 @@ def main() -> None:
   cloudlog.info("radard got CarParams")
 
   # *** setup messaging
-  sm = messaging.SubMaster(['modelV2', 'carState', 'radarTracks'], poll='modelV2')
+  sm = messaging.SubMaster(['modelV2', 'carState', 'radarTracks', 'radarTrackClass'], poll='modelV2')
   pm = messaging.PubMaster(['radarState'])
 
   RD = RadarD(CP.radarDelay)

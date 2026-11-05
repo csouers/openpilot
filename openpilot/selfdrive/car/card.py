@@ -66,8 +66,9 @@ class Car:
 
   def __init__(self, CI=None, RI=None) -> None:
     self.can_sock = messaging.sub_sock('can', timeout=20)
-    self.sm = messaging.SubMaster(['pandaStates', 'carControl', 'onroadEvents', 'navInstruction'])
-    self.pm = messaging.PubMaster(['sendcan', 'carState', 'carParams', 'carOutput', 'radarTracks', 'carBodyState'])
+    self.sm = messaging.SubMaster(['pandaStates', 'carControl', 'onroadEvents', 'navInstruction', 'radarState'])
+    self.pm = messaging.PubMaster(['sendcan', 'carState', 'carParams', 'carOutput', 'radarTracks', 'carBodyState',
+                                   'radarTrackClass'])
 
     self.can_rcv_cum_timeout_counter = 0
 
@@ -237,6 +238,13 @@ class Car:
       tracks_msg.radarTracks = RD
       self.pm.send('radarTracks', tracks_msg)
 
+      # per-track sensor classification (e.g. Bosch object class). Kept out of RadarPoint so
+      # opendbc/car/car.capnp stays upstream; radard consumes it for the low-speed lead gate.
+      rtc_msg = messaging.new_message('radarTrackClass')
+      rtc_msg.valid = tracks_msg.valid
+      rtc_msg.radarTrackClass.vehicleTrackIds = sorted(getattr(self.RI, 'vehicle_track_ids', ()))
+      self.pm.send('radarTrackClass', rtc_msg)
+
   def controls_update(self, CS: car.CarState, CC: car.CarControl):
     """control update loop, driven by carControl"""
 
@@ -250,6 +258,11 @@ class Car:
     can_sends = []
     controls_alive = self.sm.all_alive(['carControl'])
     if controls_alive:
+      # Honda ACC HUD lead state: radar-fixed vs vision-only vs no lead. Comes from the stock
+      # radarState service instead of a fork field on CarControl.
+      if self.CI.CC is not None and self.sm.valid['radarState']:
+        self.CI.CC.lead_present = bool(self.sm['radarState'].leadOne.present)
+
       # send car controls over can
       now_nanos = self.can_log_mono_time if REPLAY else int(time.monotonic() * 1e9)
       self.last_actuators_output, can_sends = self.CI.apply(CC, now_nanos)

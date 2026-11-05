@@ -45,6 +45,7 @@ _services: dict[str, tuple] = {
   "operatingSystemLog": (True, 0.),
   "carState": (True, 100., 10),
   "carBodyState": (True, 100., 1),
+  "radarTrackClass": (True, 20.),  # rlog only, like radarTracks (no qlog decimation)
   "carControl": (True, 100., 10),
   "carOutput": (True, 100., 10),
   "longitudinalPlan": (True, 20., 10),

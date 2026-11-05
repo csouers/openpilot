@@ -170,9 +170,9 @@ class Controls:
     if self.CP.brand == "honda":
       # Honda ACC icon: solid lead car only when the main lead is radar-fixed;
       # dashed ghost car for a vision-only lead; no car at all when there is no lead.
-      lead = self.sm['radarState'].leadOne
-      hudControl.leadVisible = lead.radar
-      hudControl.leadPresent = bool(lead.present)
+      hudControl.leadVisible = self.sm['radarState'].leadOne.radar
+      # "lead present at all" (vision or radar) reaches the car via radarState -> card -> CarController;
+      # CarControl has no fork-only field for it.
     hudControl.leadDistanceBars = self.sm['selfdriveState'].personality.raw + 1
     hudControl.visualAlert = self.sm['selfdriveState'].alertHudVisual
     hudControl.e2e = self.sm['selfdriveState'].experimentalMode
