@@ -73,8 +73,8 @@ class ModelRenderer(Widget):
     # on-road lead car icons: solid = radar-confirmed, dashed ghost = vision-only (hondacan.py HUD_LEAD)
     # loaded near the max draw size (~the close-lead cap), then mipmap-filtered so minification
     # to far-lead sizes stays clean instead of shimmering like plain bilinear
-    self._txt_lead_car = gui_app.texture('icons_mici/lead_car/lead_car.png', 130, 78, keep_aspect_ratio=True)
-    self._txt_lead_car_ghost = gui_app.texture('icons_mici/lead_car/lead_car_ghost.png', 130, 78, keep_aspect_ratio=True)
+    self._txt_lead_car = gui_app.texture('icons_mici/lead_car/lead_car.png', 260, 156, keep_aspect_ratio=True)
+    self._txt_lead_car_ghost = gui_app.texture('icons_mici/lead_car/lead_car_ghost.png', 260, 156, keep_aspect_ratio=True)
     for tex in (self._txt_lead_car, self._txt_lead_car_ghost):
       rl.gen_texture_mipmaps(tex)
       rl.set_texture_filter(tex, rl.TextureFilter.TEXTURE_FILTER_TRILINEAR)
@@ -227,7 +227,7 @@ class ModelRenderer(Widget):
     far_center = (bar[0] + bar[3]) / 2.0
     px_per_m = np.linalg.norm(bar[0] - bar[3]) / LEAD_BAR_WIDTH
     # cap the perspective blow-up when a lead is right on top of us
-    width = float(np.clip(LEAD_CAR_WIDTH * px_per_m, 0.0, self._rect.height * 0.55))
+    width = float(np.clip(LEAD_CAR_WIDTH * px_per_m, 0.0, self._rect.height * 1.1))
     return far_center.astype(np.float32), width
 
   def _update_model(self, lead, path_x_array):
