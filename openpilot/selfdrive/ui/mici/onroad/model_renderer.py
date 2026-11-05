@@ -19,6 +19,7 @@ MIN_DRAW_DISTANCE = 10.0
 MAX_DRAW_DISTANCE = 100.0
 LEAD_BAR_LENGTH = 24.0  # px
 LEAD_BAR_WIDTH = 5.4  # m (3x the original 1.8, spans the lane behind the target)
+LEAD_CAR_WIDTH = 2.8  # m, width of the on-road lead car icon (incl. mirrors)
 ROAD_EDGE_WIDTH = 0.08  # narrower than the 0.16 lane-line width factor
 ROAD_EDGE_COLOR = rl.Color(255, 0, 21, 255)  # same red as critical alerts
 
@@ -57,6 +58,9 @@ class LeadVehicle:
     self.d_filter = FirstOrderFilter(0.0, 0.2, 1 / gui_app.target_fps, initialized=False)
     self.y_filter = FirstOrderFilter(0.0, 0.2, 1 / gui_app.target_fps, initialized=False)
     self.fade_filter = FirstOrderFilter(0.0, 0.1, 1 / gui_app.target_fps)
+    self.radar = False  # radar-confirmed lead (vs vision-only)
+    self.icon_anchor = np.zeros(2, dtype=np.float32)  # screen px, bottom-center of the car icon
+    self.icon_width = 0.0  # screen px
 
 
 class ModelRenderer(Widget):
@@ -66,6 +70,14 @@ class ModelRenderer(Widget):
     self._lane_line_probs = np.zeros(4, dtype=np.float32)
     self._road_edge_stds = np.zeros(2, dtype=np.float32)
     self._lead_vehicles = [LeadVehicle(), LeadVehicle()]
+    # on-road lead car icons: solid = radar-confirmed, dashed ghost = vision-only (hondacan.py HUD_LEAD)
+    # loaded near the max draw size (~the close-lead cap), then mipmap-filtered so minification
+    # to far-lead sizes stays clean instead of shimmering like plain bilinear
+    self._txt_lead_car = gui_app.texture('icons_mici/lead_car/lead_car.png', 130, 78, keep_aspect_ratio=True)
+    self._txt_lead_car_ghost = gui_app.texture('icons_mici/lead_car/lead_car_ghost.png', 130, 78, keep_aspect_ratio=True)
+    for tex in (self._txt_lead_car, self._txt_lead_car_ghost):
+      rl.gen_texture_mipmaps(tex)
+      rl.set_texture_filter(tex, rl.TextureFilter.TEXTURE_FILTER_TRILINEAR)
     self._path_offset_z = HEIGHT_INIT[0]
 
     # Initialize ModelPoints objects
@@ -165,14 +177,15 @@ class ModelRenderer(Widget):
   def _update_leads(self, sm):
     plan = sm['longitudinalPlan']
     if plan.longitudinalPlanSource == log.LongitudinalPlan.LongitudinalPlanSource.e2e and len(sm['modelV2'].leadsV3) > 1:
-      leads = [(lead.prob > 0.5, lead.x[0], -lead.y[0]) for lead in list(sm['modelV2'].leadsV3)[:2]]
+      # e2e leads come from the vision model: never radar-confirmed
+      leads = [(lead.prob > 0.5, False, lead.x[0], -lead.y[0]) for lead in list(sm['modelV2'].leadsV3)[:2]]
     else:
       radar = sm['radarState']
-      leads = [(lead.present, lead.dRel + RADAR_TO_CAMERA, lead.yRel) for lead in (radar.leadOne, radar.leadTwo)]
+      leads = [(lead.present, lead.radar, lead.dRel + RADAR_TO_CAMERA, lead.yRel) for lead in (radar.leadOne, radar.leadTwo)]
 
     # both leads can be the same vehicle
-    if leads[0][0] and abs(leads[1][1] - leads[0][1]) < 3.0:
-      leads[1] = (False, 0.0, 0.0)
+    if leads[0][0] and abs(leads[1][2] - leads[0][2]) < 3.0:
+      leads[1] = (False, False, 0.0, 0.0)
 
     # ss, cs = sm['selfdriveState'], sm['carState']
     # braking disengages without making openpilot unavailable
@@ -180,15 +193,19 @@ class ModelRenderer(Widget):
     available = True
     lane = self._path.raw_points
     # opacity = 0.4 if ui_state.status == UIStatus.DISENGAGED else 0.8
-    for lead, (present, d_rel, y_rel) in zip(self._lead_vehicles, leads, strict=True):
+    for lead, (present, radar_confirmed, d_rel, y_rel) in zip(self._lead_vehicles, leads, strict=True):
       visible = available and present and d_rel < MAX_DRAW_DISTANCE and len(lane) > 0
       # snap to a new vehicle instead of sliding over
       if not visible or abs(y_rel - lead.y_filter.x) > 3.0:
         lead.d_filter.initialized = lead.y_filter.initialized = False
-      # No translucency or fade: detected leads are always solid white.
+      # No translucency or fade: detected leads are always solid.
       lead.fade_filter.x = 1.0 if visible else 0.0
+      lead.radar = radar_confirmed
       if visible:
         lead.bar = self._get_lead_bar(lane, lead.d_filter.update(d_rel), lead.y_filter.update(y_rel))
+        lead.icon_anchor, lead.icon_width = self._get_lead_icon_geometry(lead.bar)
+      else:
+        lead.icon_width = 0.0
 
   def _get_lead_bar(self, lane, d_rel, y_rel):
     # bar on the road behind the lead, following the lane
@@ -203,6 +220,15 @@ class ModelRenderer(Widget):
     length = np.linalg.norm(near.mean(axis=0) - far.mean(axis=0))
     bar[[1, 2]] = far + (near - far) * np.clip(length, 3.0, LEAD_BAR_LENGTH) / length
     return bar.astype(np.float32)
+
+  def _get_lead_icon_geometry(self, bar):
+    """Car icon anchored at the bar's far edge (the lead position on the road plane):
+    bottom-center on the road, width from the perspective scale there."""
+    far_center = (bar[0] + bar[3]) / 2.0
+    px_per_m = np.linalg.norm(bar[0] - bar[3]) / LEAD_BAR_WIDTH
+    # cap the perspective blow-up when a lead is right on top of us
+    width = float(np.clip(LEAD_CAR_WIDTH * px_per_m, 0.0, self._rect.height * 0.55))
+    return far_center.astype(np.float32), width
 
   def _update_model(self, lead, path_x_array):
     """Update model visualization data based on model message"""
@@ -360,7 +386,19 @@ class ModelRenderer(Widget):
     # green to match the other engaged-green elements (lane lines, path)
     offset = np.array([self._rect.x, self._rect.y], dtype=np.float32)
     for lead in self._lead_vehicles:
-      draw_polygon(self._rect, lead.bar + offset, rl.Color(0, 255, 64, int(255 * lead.fade_filter.x)))
+      # bar geometry is kept for icon anchoring, but no longer drawn
+      if lead.fade_filter.x <= 0.0 or lead.icon_width <= 0.0:
+        continue
+      # solid car when the radar confirms the lead, dashed ghost for vision-only
+      # (hondacan.py HUD_LEAD: 2=solid radar-fixed, 1=dashed ghost)
+      texture = self._txt_lead_car if lead.radar else self._txt_lead_car_ghost
+      w = lead.icon_width
+      h = w * texture.height / texture.width
+      pos = lead.icon_anchor + offset
+      dst = rl.Rectangle(pos[0] - w / 2.0, pos[1] - h, w, h)
+      src = rl.Rectangle(0, 0, texture.width, texture.height)
+      rl.draw_texture_pro(texture, src, dst, rl.Vector2(0, 0), 0.0,
+                          rl.Color(255, 255, 255, round(255 * lead.fade_filter.x)))
 
   @staticmethod
   def _get_path_length_idx(pos_x_array: np.ndarray, path_height: float) -> int:

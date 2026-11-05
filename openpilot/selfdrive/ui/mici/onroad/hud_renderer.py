@@ -22,8 +22,8 @@ SET_SPEED_PERSISTENCE = 2.5  # seconds
 class FontSizes:
   current_speed: int = 176
   speed_unit: int = 66
-  max_speed: int = 36
-  set_speed: int = 112
+  max_speed: int = 38
+  set_speed: int = 95
 
 
 @dataclass(frozen=True)
