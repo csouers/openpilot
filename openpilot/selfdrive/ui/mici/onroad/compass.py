@@ -10,7 +10,7 @@ from openpilot.system.ui.widgets.label import UnifiedLabel
 HEADING_SMOOTHING = 0.2
 MIN_HEADING_SPEED = 0.3  # m/s, below this the GPS heading is noise
 CARDINALS = ("n", "ne", "e", "se", "s", "sw", "w", "nw")  # 8 point, lowercase to match the branding
-FONT_SIZE = 87  # 1.5x the original 58
+FONT_SIZE = 70  # ~1.2x the original 58 (briefly 87, walked back)
 
 
 def wrap180(deg: float) -> float:
