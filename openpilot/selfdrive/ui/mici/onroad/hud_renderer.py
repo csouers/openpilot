@@ -22,7 +22,7 @@ SET_SPEED_PERSISTENCE = 2.5  # seconds
 class FontSizes:
   current_speed: int = 176
   speed_unit: int = 66
-  max_speed: int = 57  # 1.5x the original 38, so the "max" label reads clearly under the set speed
+  max_speed: int = 48  # 15% smaller than the 57 (which was 1.5x the original 38)
   set_speed: int = 95
 
 
@@ -197,7 +197,7 @@ class HudRenderer(Widget):
     rl.draw_text_ex(
       self._font_semi_bold,
       max_text,
-      rl.Vector2(center_x - max_width / 2, y + FONT_SIZES.set_speed - 7 + 4 - 10),  # nudge up to keep the larger label optically centered
+      rl.Vector2(center_x - max_width / 2, y + FONT_SIZES.set_speed - 7 + 4 - 8),  # nudge up to keep the label optically centered (scaled with the 15% size cut)
       FONT_SIZES.max_speed,
       0,
       max_color,

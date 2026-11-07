@@ -10,8 +10,8 @@ from openpilot.system.ui.widgets import Widget
 STATUS_ICONS_HEIGHT = 116
 # Compass sits at the very top of the rail (wider than the rail so two big letters fit),
 # the experimental icon right below it
-COMPASS_W = 80
-COMPASS_H = 52
+COMPASS_W = 120  # 1.5x the original 80
+COMPASS_H = 78   # 1.5x the original 52
 COMPASS_MARGIN_TOP = 11  # matches the alert text1 top offset
 COMPASS_MARGIN_RIGHT = 4
 
