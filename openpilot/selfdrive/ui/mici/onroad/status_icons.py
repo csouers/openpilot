@@ -11,8 +11,8 @@ STATUS_ICONS_HEIGHT = 116
 # Compass sits at the very top of the rail (wider than the rail so two big letters fit),
 # the experimental icon right below it
 COMPASS_W = 120  # 1.5x the original 80
-COMPASS_H = 78   # 1.5x the original 52
-COMPASS_MARGIN_TOP = 11  # matches the alert text1 top offset
+COMPASS_H = 70   # fits the 70 px font; tightened from the 1.5x-scaled 78 so the ink tucks up toward the corner
+COMPASS_MARGIN_TOP = 4   # tight to the top edge to match the set-speed box's inset (was 11)
 COMPASS_MARGIN_RIGHT = 4
 
 

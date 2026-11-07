@@ -47,7 +47,7 @@ class Compass(Widget):
       self._has_heading = True
       self._heading = (self._heading + wrap180(heading - self._heading) * HEADING_SMOOTHING) % 360.0
 
-    # fade in gently, but get out of the way fast when an alert banner comes up
+    # slide in gently, but get out of the way fast when an alert banner comes up
     target = 1.0 if (self._has_heading and not self._suppressed) else 0.0
     self._alpha_filter.update_alpha(0.1 if target < self._alpha_filter.x else 0.4)
     self._alpha_filter.update(target)
@@ -66,10 +66,15 @@ class Compass(Widget):
     return None
 
   def _render(self, _):
-    alpha = self._alpha_filter.x
-    if alpha < 0.02:
+    slide = self._alpha_filter.x
+    if slide < 0.02:
       return
 
     self._label.set_text(self.cardinal())
-    self._label.set_text_color(rl.Color(255, 255, 255, int(235 * alpha)))
-    self._label.render(self._rect)
+    # slide in/out through the top edge (same mechanism as the HUD set-speed box), not a fade:
+    # at slide=0 the label sits exactly one slot above its rest position, fully off-screen
+    slide_rect = rl.Rectangle(self._rect.x,
+                              self._rect.y - (1.0 - slide) * (self._rect.y + self._rect.height),
+                              self._rect.width, self._rect.height)
+    self._label.set_text_color(rl.Color(255, 255, 255, 235))
+    self._label.render(slide_rect)

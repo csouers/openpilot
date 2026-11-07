@@ -197,7 +197,7 @@ class HudRenderer(Widget):
     rl.draw_text_ex(
       self._font_semi_bold,
       max_text,
-      rl.Vector2(center_x - max_width / 2, y + FONT_SIZES.set_speed - 7 + 4 - 8),  # nudge up to keep the label optically centered (scaled with the 15% size cut)
+      rl.Vector2(center_x - max_width / 2, y + FONT_SIZES.set_speed - 6),  # sliver of extra space between the number and the label (was set_speed - 11)
       FONT_SIZES.max_speed,
       0,
       max_color,
