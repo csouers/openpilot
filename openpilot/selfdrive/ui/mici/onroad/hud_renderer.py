@@ -99,10 +99,6 @@ class HudRenderer(Widget):
     # when the car doesn't report one (upstream dropped this fallback)
     v_cruise_cluster = car_state.vCruiseCluster
     set_speed = sm['controlsState'].deprecated.vCruise if v_cruise_cluster == 0.0 else v_cruise_cluster
-    # TEMP(2026-11-06): fake the cruise set speed as 50 (mph) whenever the car reports none
-    # (0, NA=255 or unavailable) — user-requested, remove when done
-    if not (0 < set_speed < SET_SPEED_NA):
-      set_speed = 50 * CV.MPH_TO_KPH
     engaged = sm['selfdriveState'].enabled
     if (set_speed != self.set_speed and engaged) or (engaged and not self._engaged):
       self._set_speed_changed_time = rl.get_time()
