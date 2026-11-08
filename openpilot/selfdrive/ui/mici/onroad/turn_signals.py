@@ -6,6 +6,7 @@ from openpilot.system.ui.widgets import Widget
 
 ICON_W, ICON_H = 72, 66
 MARGIN = 16
+BOTTOM_LIFT = 25  # raise the arrows up off the bottom edge
 
 
 class TurnSignals(Widget):
@@ -34,7 +35,7 @@ class TurnSignals(Widget):
       self._right_on = CS.rightBlinker
 
   def _render(self, _):
-    bottom_y = self._rect.y + self._rect.height - ICON_H - MARGIN
+    bottom_y = self._rect.y + self._rect.height - ICON_H - MARGIN - BOTTOM_LIFT
     for texture, x, on in ((self._left, self._rect.x + MARGIN, self._left_on),
                            (self._right, self._rect.x + self._rect.width - MARGIN - ICON_W, self._right_on)):
       if on:

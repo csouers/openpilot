@@ -16,13 +16,14 @@ MIN_DRAW_DISTANCE = 10.0
 LEAD_BAR_LENGTH = 24.0  # px
 LEAD_BAR_WIDTH = 5.4  # m (3x the original 1.8, spans the lane behind the target)
 LEAD_CAR_WIDTH = 2.8  # m, width of the on-road lead car icon (incl. mirrors)
+LEAD_MIN_ICON_WIDTH = 8.7  # px floor so a distant lead still reads as a car (6.0 +45%)
 ROAD_EDGE_WIDTH = 0.08  # narrower than the 0.16 lane-line width factor
 ROAD_EDGE_COLOR = rl.Color(255, 0, 21, 255)  # same red as critical alerts
 
 # neo-era steering-angle path (selfdrive/ui/ui.c @ v0.3.5 draw_steering): curvature from the
 # measured steering angle, drawn as a translucent blue line; matches the lane curve when tracking well
 STEER_PATH_POINTS = 50
-STEER_PATH_HALF_WIDTH = 0.15  # m, half-width of the drawn line
+STEER_PATH_HALF_WIDTH = 0.08  # m, half-width of the drawn line (thinned from 0.15)
 STEER_PATH_RATIO = 15.3  # steering ratio fallback when CP isn't up yet
 STEER_PATH_WHEELBASE = 2.67  # m, fallback
 STEER_PATH_SLIP = 0.0014
@@ -97,7 +98,10 @@ class ModelRenderer(BaseModelRenderer):
     extrinsics_calibration = sm['extrinsicsCalibration']
     self._path_offset_z = extrinsics_calibration.height[0] if extrinsics_calibration.height else HEIGHT_INIT[0]
 
-    if sm.updated['carParams']:
+    # latch on validity, not on the one frame where carParams updates: in replay (and when the UI
+    # starts mid-route) updated['carParams'] is only true for a single frame, so leads would never
+    # draw until a later segment re-published it
+    if sm.valid['carParams']:
       self._longitudinal_control = sm['carParams'].openpilotLongitudinalControl
 
     model = sm['modelV2']
@@ -149,7 +153,9 @@ class ModelRenderer(BaseModelRenderer):
     lane = self._path.raw_points
     # opacity = 0.4 if ui_state.status == UIStatus.DISENGAGED else 0.8
     for lead, (present, radar_confirmed, d_rel, y_rel) in zip(self._lead_vehicles, leads, strict=True):
-      visible = available and present and d_rel < MAX_DRAW_DISTANCE and len(lane) > 0
+      # no distance cutoff: a detected lead is always drawn (past the model path's extent the
+      # road-plane geometry is extrapolated, see _interp_extrap)
+      visible = available and present and len(lane) > 0
       # snap to a new vehicle instead of sliding over
       if not visible or abs(y_rel - lead.y_filter.x) > 3.0:
         lead.d_filter.initialized = lead.y_filter.initialized = False
@@ -162,10 +168,19 @@ class ModelRenderer(BaseModelRenderer):
       else:
         lead.icon_width = 0.0
 
+  @staticmethod
+  def _interp_extrap(x_arr: np.ndarray, y_arr: np.ndarray, x: float) -> float:
+    """np.interp, but linearly extrapolate past the end of the model path instead of clamping."""
+    if x <= x_arr[-1] or len(x_arr) < 2:
+      return float(np.interp(x, x_arr, y_arr))
+    dx = x_arr[-1] - x_arr[-2]
+    slope = (y_arr[-1] - y_arr[-2]) / dx if dx > 0 else 0.0
+    return float(y_arr[-1] + slope * (x - x_arr[-1]))
+
   def _get_lead_bar(self, lane, d_rel, y_rel):
     # bar on the road behind the lead, following the lane
     x = np.array([d_rel, d_rel - min(6.0, 0.25 * d_rel)])
-    y = np.interp(x, lane[:, 0], lane[:, 1]) - np.interp(d_rel, lane[:, 0], lane[:, 1]) - y_rel
+    y = np.interp(x, lane[:, 0], lane[:, 1]) - self._interp_extrap(lane[:, 0], lane[:, 1], d_rel) - y_rel
     z = np.interp(x, self._path.raw_points[:, 0], self._path.raw_points[:, 2]) + self._path_offset_z
     corners = np.vstack((np.column_stack((x, y + LEAD_BAR_WIDTH / 2, z)), np.column_stack((x, y - LEAD_BAR_WIDTH / 2, z))[::-1]))
     pts = self._car_space_transform @ corners.T
@@ -181,8 +196,9 @@ class ModelRenderer(BaseModelRenderer):
     bottom-center on the road, width from the perspective scale there."""
     far_center = (bar[0] + bar[3]) / 2.0
     px_per_m = np.linalg.norm(bar[0] - bar[3]) / LEAD_BAR_WIDTH
-    # cap the perspective blow-up when a lead is right on top of us
-    width = float(np.clip(LEAD_CAR_WIDTH * px_per_m, 0.0, self._rect.height * 1.1))
+    # cap the perspective blow-up when a lead is right on top of us (1.1 of the view height, +10%),
+    # and keep a floor so a far lead doesn't shrink into a subpixel speck
+    width = float(np.clip(LEAD_CAR_WIDTH * px_per_m, LEAD_MIN_ICON_WIDTH, self._rect.height * 1.21))
     return far_center.astype(np.float32), width
 
   def _update_model(self, lead, path_x_array):

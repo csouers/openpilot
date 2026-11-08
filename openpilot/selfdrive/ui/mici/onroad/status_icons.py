@@ -16,6 +16,8 @@ STATUS_ICONS_HEIGHT = 116
 EXPERIMENTAL_MODE_ICON_DROP = 6
 # how long the experimental icon trails the compass when the pair slides in/out
 EXPERIMENTAL_ICON_DELAY_S = 0.18
+# orange overlay on the (white) experimental-mode icon so it reads as its own state
+EXPERIMENTAL_MODE_ICON_COLOR = rl.Color(255, 165, 0, 255)
 # Compass sits at the very top of the rail (wider than the rail so two big letters fit),
 # the experimental icon right below it
 COMPASS_W = 120  # 1.5x the original 80
@@ -104,4 +106,4 @@ class StatusIconColumn(Widget):
     center_x += (1.0 - slide) * (COMPASS_W / 2 + self._experimental_texture.width)
     center = rl.Vector2(center_x, center_y)
 
-    self._draw_texture_centered(self._experimental_texture, center, rl.WHITE)
+    self._draw_texture_centered(self._experimental_texture, center, EXPERIMENTAL_MODE_ICON_COLOR)
