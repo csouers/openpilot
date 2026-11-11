@@ -148,7 +148,7 @@ class MiciHomeLayout(Widget):
     ], spacing=18)
 
     self._openpilot_label = UnifiedLabel("openpilot", font_size=96, font_weight=FontWeight.DISPLAY, max_width=480, wrap_text=False)
-    self._version_commit_label = UnifiedLabel("", font_size=36, text_color=rl.GRAY, font_weight=FontWeight.ROMAN, max_width=480, wrap_text=False)
+    self._version_commit_label = UnifiedLabel("", font_size=42, text_color=rl.GRAY, font_weight=FontWeight.ROMAN, max_width=480, wrap_text=False)
 
   def set_callbacks(self, on_settings: Callable | None = None, on_alerts: Callable | None = None,
                     alert_count_callback: Callable[[], int] | None = None,
