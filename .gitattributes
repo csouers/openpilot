@@ -15,7 +15,3 @@ openpilot/selfdrive/assets/icons_mici/lead_car/*.png -filter -diff -merge -text
 
 openpilot/selfdrive/car/tests/test_models_segs.txt filter=lfs diff=lfs merge=lfs -text
 openpilot/common/hardware/comma/updater filter=lfs diff=lfs merge=lfs -text
-# fork-local: store the AGNOS updater zipapp as a plain blob. AGNOS images have no git-lfs, so any
-# checkout/reset of an LFS pointer for this path deletes the file, and launch_chffrplus.sh then has
-# no updater to run when the AGNOS version gate trips.
-openpilot/common/hardware/comma/updater -filter -diff -merge -text

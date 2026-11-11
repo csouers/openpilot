@@ -6,6 +6,7 @@ from collections import defaultdict
 
 import openpilot.cereal.messaging as messaging
 from tools.scripts.car.can_table import can_table
+from opendbc.car.dbc import DBC
 from openpilot.tools.lib.logreader import LogIterable, LogReader
 
 RED = '\033[91m'
@@ -18,29 +19,29 @@ def update(msgs, bus, dat, low_to_high, high_to_low, minaddr, quiet=False, dbc=N
       continue
 
     for y in x.can:
-      if y.src == bus:
-        if y.address >= minaddr:
-          dat[y.address] = y.dat
+      if y.src == bus and y.address >= minaddr:
+        addr, d = y.address, y.dat
+        dat[addr] = d
 
-          i = int.from_bytes(y.dat, byteorder='big')
-          l_h = low_to_high[y.address]
-          h_l = high_to_low[y.address]
+        i = int.from_bytes(d, byteorder='big')
+        l_h = low_to_high[addr]
+        h_l = high_to_low[addr]
 
-          change = None
-          if (i | l_h) != l_h:
-            low_to_high[y.address] = i | l_h
-            change = "+"
+        change = None
+        if (i | l_h) != l_h:
+          low_to_high[addr] = i | l_h
+          change = "+"
 
-          if (~i | h_l) != h_l:
-            high_to_low[y.address] = ~i | h_l
-            change = "-"
+        if (~i | h_l) != h_l:
+          high_to_low[addr] = ~i | h_l
+          change = "-"
 
-          if change and not quiet:
-            msg_name = ""
-            if dbc:
-              msg_name = dbc.addr_to_msg.get(y.address)
-              msg_name = f" {msg_name.name}" if msg_name else ""
-            print(f"{time.monotonic():.2f}\t{hex(y.address)} ({y.address}){msg_name}\t{change}{binascii.hexlify(y.dat)}")
+        if change and not quiet:
+          name = ""
+          if dbc:
+            msg = dbc.addr_to_msg.get(addr)
+            name = f" {msg.name}" if msg else ""
+          print(f"{time.monotonic():.2f}\t{hex(addr)} ({addr}){name}\t{change}{binascii.hexlify(d)}")
 
 
 def can_printer(bus=0, min_addr=0, init_msgs=None, new_msgs=None, table=False, dbc=None):
@@ -80,11 +81,11 @@ def can_printer(bus=0, min_addr=0, init_msgs=None, new_msgs=None, table=False, d
     b = d.to_bytes(len(dat[addr]), byteorder='big')
 
     byts = ''.join([(c if c == '0' else f'{RED}{c}{CLEAR}') for c in str(binascii.hexlify(b))[2:-1]])
-    msg_name = ""
+    name = ""
     if dbc:
-      msg_name = dbc.addr_to_msg.get(addr)
-      msg_name = f" {msg_name.name}" if msg_name else ""
-    header = f"{hex(addr).ljust(6)}({str(addr).ljust(4)}){msg_name}"
+      msg = dbc.addr_to_msg.get(addr)
+      name = f" {msg.name}" if msg else ""
+    header = f"{hex(addr).ljust(6)}({str(addr).ljust(4)}){name}"
     print(header, byts)
     tables += f"{header}\n"
     tables += can_table(b) + "\n\n"

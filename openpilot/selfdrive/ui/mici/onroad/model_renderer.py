@@ -10,7 +10,7 @@ from openpilot.selfdrive.ui.mici.onroad import blend_colors
 from openpilot.selfdrive.ui.onroad.model_renderer import (ModelPoints, ModelRenderer as BaseModelRenderer,
                                                           CLIP_MARGIN, MAX_DRAW_DISTANCE, STOCK_PATH_GRADIENT)
 from openpilot.system.ui.lib.application import gui_app
-from openpilot.system.ui.lib.shader_polygon import draw_polygon
+from openpilot.system.ui.lib.polygon import draw_polygon
 
 MIN_DRAW_DISTANCE = 10.0
 LEAD_BAR_LENGTH = 24.0  # px
