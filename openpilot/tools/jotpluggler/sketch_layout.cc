@@ -820,6 +820,8 @@ Pane parse_dock_area(const json11::Json &dock_area_node) {
     pane.kind = PaneKind::Map;
   } else if (kind == "thumbnail") {
     pane.kind = PaneKind::Thumbnail;
+  } else if (kind == "radar") {
+    pane.kind = PaneKind::RadarPoints;
   } else if (kind == "camera") {
     pane.kind = PaneKind::Camera;
     const std::string camera_view = dock_area_node["camera_view"].string_value();

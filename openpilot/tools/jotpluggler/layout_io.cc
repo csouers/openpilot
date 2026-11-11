@@ -64,6 +64,8 @@ json11::Json workspace_node_to_json(const WorkspaceNode &node, const WorkspaceTa
       obj["kind"] = "map";
     } else if (pane.kind == PaneKind::Thumbnail) {
       obj["kind"] = "thumbnail";
+    } else if (pane.kind == PaneKind::RadarPoints) {
+      obj["kind"] = "radar";
     } else if (pane.kind == PaneKind::Camera) {
       obj["kind"] = "camera";
       obj["camera_view"] = camera_view_spec(pane.camera_view).layout_name;

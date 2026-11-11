@@ -84,6 +84,7 @@ enum class PaneKind : uint8_t {
   Map,
   Thumbnail,
   Camera,
+  RadarPoints,
 };
 
 enum class CameraViewKind : uint8_t {
@@ -253,6 +254,41 @@ struct GpsPoint {
   double lon = 0.0;
   float bearing = 0.0f;
   TimelineEntry::Type type = TimelineEntry::Type::None;
+};
+
+struct RadarPoint2D {
+  float d_rel = 0.0f;
+  float y_rel = 0.0f;
+  float v_rel = 0.0f;
+  float length = 0.0f;
+  float prob_exist = 0.0f;
+  float prob_class = 0.0f;
+  uint8_t cls = 0;
+  uint8_t moving_state = 0;
+  int slot = 0;
+  bool valid = false;
+  bool measured = false;
+};
+
+struct RadarPointFrame {
+  double time = 0.0;
+  std::vector<RadarPoint2D> points;
+};
+
+struct RadarPointsData {
+  std::string source_key;
+  std::string error;
+  std::string dbc_name;
+  int bus = -1;
+  bool ok = false;
+  double t_min = 0.0;
+  double t_max = 0.0;
+  std::vector<RadarPointFrame> frames;
+  std::vector<std::string> class_names;
+  std::vector<std::string> move_state_names;
+  std::vector<int> class_counts;
+  int dropped_untracked = 0;
+  int dropped_pair_mismatch = 0;
 };
 
 struct GpsTrace {
@@ -524,6 +560,7 @@ struct AppSession {
   std::array<std::unique_ptr<CameraFeedView>, 4> pane_camera_feeds;
   std::unique_ptr<ThumbnailView> thumbnail_view;
   std::unique_ptr<MapDataManager> map_data;
+  std::unique_ptr<RadarPointsData> radar_points;
   bool async_route_loading = false;
   double next_stream_custom_refresh_time = 0.0;
   bool stream_paused = false;
@@ -543,12 +580,20 @@ struct TabUiState {
     bool fit_to_pane = true;
   };
 
+  struct RadarPaneState {
+    bool valid_only = true;
+    bool show_class_counts = true;
+    float zoom = 1.0f;
+    float min_prob_exist = 0.0f;
+  };
+
   bool dock_needs_build = true;
   int active_pane_index = 0;
   int runtime_id = 0;
   ImVec2 last_dockspace_size = ImVec2(0.0f, 0.0f);
   std::vector<MapPaneState> map_panes;
   std::vector<CameraPaneState> camera_panes;
+  std::vector<RadarPaneState> radar_panes;
 };
 
 struct CustomSeriesEditorState {
@@ -811,6 +856,10 @@ void draw_logs_tab(AppSession *session, UiState *state);
 void draw_init_data_tab(AppSession *session, UiState *state);
 
 // *****
+// radar points (tesla bosch radar decoded straight out of the rlog can frames)
+RadarPointsData *ensure_radar_points(AppSession *session);
+void draw_radar_pane(AppSession *session, UiState *state, Pane *pane, int pane_index);
+
 // map
 // *****
 

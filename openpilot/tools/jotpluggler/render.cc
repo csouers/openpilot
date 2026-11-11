@@ -6,6 +6,9 @@
 
 #include <GLFW/glfw3.h>
 
+#include <utility>
+#include <vector>
+
 namespace fs = std::filesystem;
 
 void draw_fps_overlay(const UiState &state, float top_offset) {
@@ -122,9 +125,25 @@ void save_framebuffer_png(const fs::path &output_path, int width, int height) {
   }
   write_file_or_throw(ppm_path, ppm.data(), ppm.size());
 
-  const std::string command = "convert " + shell_quote(ppm_path.string()) + " " + shell_quote(output_path.string());
-  run_system_or_throw(command, "image conversion");
-  fs::remove(ppm_path);
+  // convert is Linux/ImageMagick; sips ships with macOS, magick is IM7
+  const std::string quoted_in = shell_quote(ppm_path.string());
+  const std::string quoted_out = shell_quote(output_path.string());
+  const std::vector<std::pair<std::string, std::string>> converters = {
+    {"sips -s format png " + quoted_in + " --out " + quoted_out, "sips"},
+    {"convert " + quoted_in + " " + quoted_out, "convert"},
+    {"magick " + quoted_in + " " + quoted_out, "magick"},
+  };
+  for (const auto &[command, name] : converters) {
+    try {
+      run_system_or_throw(command, name);
+      fs::remove(ppm_path);
+      return;
+    } catch (const std::runtime_error &) {
+      continue;
+    }
+  }
+  // leave the ppm in place so the frame is still usable
+  throw std::runtime_error("no png encoder found (tried sips, convert, magick); wrote " + ppm_path.string());
 }
 
 void render_frame(GLFWwindow *window, AppSession *session, UiState *state, const fs::path *capture_path) {

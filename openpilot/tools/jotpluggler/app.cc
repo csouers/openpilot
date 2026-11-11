@@ -406,6 +406,7 @@ void resize_tab_pane_state(TabUiState *tab_state, size_t pane_count) {
   if (tab_state == nullptr) return;
   tab_state->map_panes.resize(pane_count);
   tab_state->camera_panes.resize(pane_count);
+  tab_state->radar_panes.resize(pane_count);
 }
 
 void sync_route_buffers(UiState *state, const AppSession &session) {
@@ -1570,6 +1571,8 @@ void draw_pane_windows(AppSession *session, UiState *state) {
         draw_map_pane(session, state, &pane, static_cast<int>(i));
       } else if (pane.kind == PaneKind::Thumbnail) {
         draw_thumbnail_pane(session, state);
+      } else if (pane.kind == PaneKind::RadarPoints) {
+        draw_radar_pane(session, state, &pane, static_cast<int>(i));
       } else if (pane.kind == PaneKind::Camera) {
         draw_camera_pane(session, state, tab_state, static_cast<int>(i), pane);
       } else {
