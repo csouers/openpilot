@@ -11,6 +11,7 @@ from openpilot.common.realtime import drop_realtime
 from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.ui.lib.prime_state import PrimeState
 from openpilot.selfdrive.ui.honda_illumination import HondaIllumination
+from openpilot.selfdrive.ui.lib.notifications import Notifications
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.common.hardware import HARDWARE, PC
 from openpilot.common.hardware.usb import CHESTNUT_ENUMERATION_GRACE, cable_connected, get_usb_state, is_chestnut_usb_id, usb_host_connected
@@ -90,6 +91,7 @@ class UIState:
     )
 
     self.prime_state = PrimeState()
+    self.notifications = Notifications()
 
     # UI Status tracking
     self.status: UIStatus = UIStatus.DISENGAGED
@@ -156,6 +158,7 @@ class UIState:
 
   def update(self) -> None:
     self.prime_state.start()  # start thread after manager forks ui
+    self.notifications.start()
     if self._params_thread is None:
       self._params_thread = threading.Thread(target=self._params_refresh_worker, daemon=True)
       self._params_thread.start()
