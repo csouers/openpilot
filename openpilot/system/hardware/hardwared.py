@@ -31,6 +31,7 @@ from openpilot.system.hardware.chestnut.monitoring import chestnut_state_thread
 from openpilot.system.hardware.chestnut.status import ChestnutStatus
 from openpilot.common.version import terms_version, training_version
 from openpilot.system.athena.registration import UNREGISTERED_DONGLE_ID
+from openpilot import jetlink_adapter
 
 ThermalStatus = log.DeviceState.ThermalStatus
 NetworkType = log.DeviceState.NetworkType
@@ -39,6 +40,9 @@ TEMP_TAU = 5.   # 5s time constant
 DISCONNECT_TIMEOUT = 5.  # wait 5 seconds before going offroad after disconnect so you get an alert
 PANDA_STATES_TIMEOUT = round(1000 / SERVICE_LIST['pandaStates'].frequency * 1.5)  # 1.5x the expected pandaState frequency
 ONROAD_CYCLE_TIME = 1  # seconds to wait offroad after requesting an onroad cycle
+# the longest a shutdown waits on an off-device accelerator: jetlink's own deadline (25 s) plus
+# 5 s, written out so it holds with no jetlink at all
+JETLINK_SHUTDOWN_CAP_S = 30.
 
 class Chestnut:
   # flash before going onroad, modeld ignores chestnut until the product string matches
@@ -217,6 +221,9 @@ def hardware_thread(end_event, hw_queue) -> None:
   off_ts: float | None = None
   started_ts: float | None = None
   started_seen = False
+  # set on the first loop that wants a shutdown, and never cleared: an accelerator
+  # on its own supply is asked to power off before the comma does
+  shutdown_since: float | None = None
   startup_blocked_ts: float | None = None
   thermal_status = ThermalStatus.ok
 
@@ -384,6 +391,13 @@ def hardware_thread(end_event, hw_queue) -> None:
     show_alert = (not onroad_conditions["device_temp_good"] or not startup_conditions["device_temp_engageable"]) and onroad_conditions["ignition"]
     set_offroad_alert_if_changed("Offroad_TemperatureTooHigh", show_alert, extra_text=extra_text)
 
+    # an accelerator the user turned on that cannot run is otherwise silently absent
+    jetlink_reason = jetlink_adapter.reason()
+    set_offroad_alert_if_changed("Offroad_JetlinkUnavailable", jetlink_reason is not None, extra_text=jetlink_reason)
+
+    # no drive may start under the power-off that follows
+    startup_conditions["not_powering_off"] = shutdown_since is None
+
     if show_alert:
       msg.deviceState.fanSpeedPercentDesired = 100
 
@@ -451,7 +465,11 @@ def hardware_thread(end_event, hw_queue) -> None:
     msg.deviceState.somPowerDrawW = som_power_draw
 
     # Check if we need to shut down
-    if power_monitor.should_shutdown(onroad_conditions["ignition"], in_car, off_ts, started_seen):
+    should_shutdown = power_monitor.should_shutdown(onroad_conditions["ignition"], in_car, off_ts, started_seen)
+    if should_shutdown and shutdown_since is None:
+      shutdown_since = time.monotonic()
+    capped = shutdown_since is not None and time.monotonic() - shutdown_since > JETLINK_SHUTDOWN_CAP_S
+    if jetlink_adapter.shutdown_step(should_shutdown, f"offroad since {off_ts}") or capped:
       cloudlog.warning(f"shutting device down, offroad since {off_ts}")
       params.put_bool("DoShutdown", True, block=True)
 

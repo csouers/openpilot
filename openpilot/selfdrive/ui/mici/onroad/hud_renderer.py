@@ -129,8 +129,12 @@ class HudRenderer(Widget):
     if loading:
       icon = self._txt_chestnut
       opacity = 0.35 + 0.65 * (0.5 - 0.5 * math.cos(rl.get_time() * 6.0))
-    elif ui_state.chestnut_state in (ChestnutState.UNCOMPILED, ChestnutState.FAILED):
+    elif ui_state.chestnut_state in (ChestnutState.UNCOMPILED, ChestnutState.FAILED, ChestnutState.UNAVAILABLE):
       icon = self._txt_chestnut_orange
+      opacity = 1.0
+    elif ui_state.chestnut_state == ChestnutState.WAITING:
+      # attached with its engine up, only the swap window missing: steady, unlike the load pulse
+      icon = self._txt_chestnut
       opacity = 1.0
     elif ui_state.chestnut_state == ChestnutState.ACTIVE:
       icon = self._txt_chestnut_green

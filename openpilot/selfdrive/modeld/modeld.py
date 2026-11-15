@@ -35,6 +35,7 @@ from openpilot.common.realtime import config_realtime_process, DT_MDL
 from openpilot.common.transformations.camera import DEVICE_CAMERAS
 from openpilot.system.camerad.cameras.nv12_info import get_nv12_info
 from openpilot.common.transformations.model import get_warp_matrix
+from openpilot import jetlink_adapter
 from openpilot.selfdrive.controls.lib.desire_helper import DesireHelper
 from openpilot.selfdrive.controls.lib.drive_helpers import get_accel_from_plan, should_stop, smooth_value, get_curvature_from_plan
 from openpilot.selfdrive.modeld.parse_model_outputs import Parser
@@ -247,10 +248,14 @@ def main(demo=False):
   # must not show up as a GPU that is loading (that also blocks engagement with a Big Model Loading
   # no-entry alert for as long as the probe waits)
   params.put_bool("ChestnutLoading", chestnut_compiled() and chestnut_present())
-  CHESTNUT = chestnut_expected()
+  # a Mac or an iPhone on the port is a cable too, so with the link on it is never a
+  # chestnut: skip the enumeration grace a bare cable would sit through
+  CHESTNUT = chestnut_expected() if not jetlink_adapter.link_on() else chestnut_present()
   params.put_bool("ChestnutLoading", CHESTNUT)
   if not CHESTNUT and cable_connected() and chestnut_compiled():
     cloudlog.warning("USB-C cable connected but no chestnut enumerated, using the small model")
+  # before going realtime: the GPU thread it starts would inherit SCHED_FIFO 54 on core 7
+  jetlink_adapter.prepare(CHESTNUT)
   if CHESTNUT:
     from tinygrad.runtime.ops_amd import AMDDevice
     AMDDevice.wait_timeout_ms = 3000
@@ -311,6 +316,8 @@ def main(demo=False):
   small_model = ModelState(cam_w, cam_h, False) if model is None or CHESTNUT else None
   if model is None:
     model = small_model
+  # a big model joining over jetlink drives as the small model until it is ready
+  model = jetlink_adapter.attach(model, small_model, cam_w, cam_h)
   params.put_bool("ChestnutLoading", False)
   cloudlog.warning(f"models loaded in {time.monotonic() - st:.1f}s, modeld starting")
 
@@ -417,6 +424,8 @@ def main(demo=False):
     run_count = run_count + 1
 
     frame_drop_ratio = frames_dropped / (1 + frames_dropped)
+    # a lagging model from off-device is handed back without this
+    model.frame_drop_ratio = frame_drop_ratio
 
     bufs = {name: buf_extra if 'big' in name else buf_main for name in model.vision_input_names}
     transforms = {name: model_transform_extra if 'big' in name else model_transform_main for name in model.vision_input_names}
@@ -448,6 +457,9 @@ def main(demo=False):
       model_output = None
     mt2 = time.perf_counter()
     model_execution_time = mt2 - mt1
+    if jetlink_adapter.handed_over(model):
+      # a swap or a hand-back stalls a frame or two: those drops restart the warmup
+      run_count, frame_drop_ratio = 0, 0.
 
     if model_output is not None:
       modelv2_send = messaging.new_message('modelV2')

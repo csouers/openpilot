@@ -17,6 +17,7 @@ from openpilot.common.hardware import HARDWARE, PC
 from openpilot.common.hardware.usb import CHESTNUT_ENUMERATION_GRACE, cable_connected, get_usb_state, is_chestnut_usb_id, usb_host_connected
 from openpilot.selfdrive.modeld.helpers import chestnut_compiled
 from openpilot.selfdrive.selfdrived.alertmanager import OFFROAD_ALERTS
+from openpilot import jetlink_adapter
 
 BACKLIGHT_OFFROAD = 65 if HARDWARE.get_device_type() == "mici" else 50
 PARAM_UPDATE_TIME = 1 / 5.0
@@ -47,6 +48,10 @@ class ChestnutState(Enum):
   LOADING = "loading"
   ACTIVE = "active"
   FAILED = "failed"
+  # an off-board accelerator over jetlink: attached with its engine up but no swap
+  # window yet, and one the link cannot run at all
+  WAITING = "waiting"
+  UNAVAILABLE = "unavailable"
 
 
 class UIState:
@@ -236,6 +241,19 @@ class UIState:
       self._started_prev = self.started
 
   def _update_chestnut_state(self) -> None:
+    # an off-board accelerator over jetlink draws the same icon: jetlink's own
+    # status.icon() answers in ChestnutState's names, and it defers to a fitted
+    # chestnut, so there is nothing to arbitrate here
+    status = jetlink_adapter.status()
+    if status is not None and status.shown:
+      model_seen = self.sm.recv_frame["modelV2"] > self.started_frame
+      running_big = model_seen and self.sm.alive["modelV2"] and self.sm["modelV2"].big
+      runtime = jetlink_adapter.hooks().runtime()
+      self.chestnut_present = status.present or status.enabled
+      self.chestnut_state = ChestnutState(status.icon(self.started, model_seen, running_big,
+                                                     (runtime.state if runtime is not None else None) or 'none'))
+      return
+
     detected = self.sm["deviceState"].chestnutPresent
     if not self.started:
       self.chestnut_present = detected

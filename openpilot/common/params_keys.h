@@ -147,5 +147,15 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"ChestnutActive", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION | CLEAR_ON_IGNITION_ON, BOOL}},
     {"ChestnutLoading", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION | CLEAR_ON_IGNITION_ON, BOOL}},
     {"ChestnutRetry", {CLEAR_ON_MANAGER_START | CLEAR_ON_IGNITION_ON, BOOL}},
+    // Jetlink: the large model on an attached Mac (see openpilot/jetlink_adapter.py).
+    // JetlinkSpec says whether its engine is built, which must survive a reboot, or
+    // every ignition cycle would rebuild a multi-minute engine.
+    // on by default: the four runs the large model on this Mac whenever the USB-C
+    // cable is connected, and the small model when it is not (0 = off, 1 = usb, 2 = ios)
+    {"JetlinkLink", {PERSISTENT, INT, "1"}},
+    {"JetlinkProgress", {CLEAR_ON_MANAGER_START, JSON}},
+    {"JetlinkSpec", {PERSISTENT, JSON}},
+    {"JetlinkChargePhone", {PERSISTENT, BOOL, "0"}},
+    {"Offroad_JetlinkUnavailable", {CLEAR_ON_MANAGER_START, JSON}},
     {"Version", {PERSISTENT, STRING}},
 };
