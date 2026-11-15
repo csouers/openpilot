@@ -37,6 +37,10 @@ COLORS = Colors()
 
 
 class HudRenderer(Widget):
+  # the model-source icon sits 14 px above the bottom edge; add its height so its whole
+  # body clears that edge when it slides away
+  CHESTNUT_SLIDE_PX = 14
+
   def __init__(self):
     super().__init__()
     """Initialize the HUD renderer."""
@@ -152,8 +156,11 @@ class HudRenderer(Widget):
     if alpha < 1e-2:
       return
 
+    # slide with the fade, as the set-speed box does: up into place from the bottom edge when
+    # it appears, and back off the bottom edge when it goes
+    slide = (1.0 - alpha) * (icon.height + self.CHESTNUT_SLIDE_PX)
     pos = rl.Vector2(rect.x + rect.width - 10 - icon.width,
-                     rect.y + rect.height - 14 - (self._txt_wheel.height + icon.height) / 2)
+                     rect.y + rect.height - 14 - (self._txt_wheel.height + icon.height) / 2 + slide)
     rl.draw_texture_ex(icon, pos, 0.0, 1.0, rl.Color(255, 255, 255, int(255 * opacity * alpha)))
 
   def _draw_set_speed(self, rect: rl.Rectangle) -> None:
