@@ -145,7 +145,9 @@ class HudRenderer(Widget):
     if icon is not self._chestnut_icon:
       self._chestnut_fade_time = rl.get_time()
       self._chestnut_icon = icon
-    visible = loading or rl.get_time() - self._chestnut_fade_time < SET_SPEED_PERSISTENCE
+    # the green icon is a status, not a notification: while the large model drives, it stays
+    # up for as long as that is true. The other states keep the brief "something changed" show.
+    visible = loading or icon is self._txt_chestnut_green or rl.get_time() - self._chestnut_fade_time < SET_SPEED_PERSISTENCE
     alpha = self._chestnut_alpha_filter.update(visible)
     if alpha < 1e-2:
       return
