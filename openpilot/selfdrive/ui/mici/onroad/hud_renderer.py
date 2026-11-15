@@ -129,33 +129,38 @@ class HudRenderer(Widget):
     self._draw_model_source(rect)
 
   def _draw_model_source(self, rect: rl.Rectangle) -> None:
-    loading = ui_state.chestnut_state == ChestnutState.LOADING
+    state = ui_state.chestnut_state
+    loading = state == ChestnutState.LOADING
     if loading:
       icon = self._txt_chestnut
       opacity = 0.35 + 0.65 * (0.5 - 0.5 * math.cos(rl.get_time() * 6.0))
-    elif ui_state.chestnut_state in (ChestnutState.UNCOMPILED, ChestnutState.FAILED, ChestnutState.UNAVAILABLE):
+    elif state in (ChestnutState.UNCOMPILED, ChestnutState.FAILED, ChestnutState.UNAVAILABLE):
       icon = self._txt_chestnut_orange
       opacity = 1.0
-    elif ui_state.chestnut_state == ChestnutState.WAITING:
+    elif state == ChestnutState.WAITING:
       # attached with its engine up, only the swap window missing: steady, unlike the load pulse
       icon = self._txt_chestnut
       opacity = 1.0
-    elif ui_state.chestnut_state == ChestnutState.ACTIVE:
+    elif state == ChestnutState.ACTIVE:
       icon = self._txt_chestnut_green
       opacity = 1.0
     else:
-      return
+      # nothing to show: keep fading the last one out, so it slides away instead of vanishing
+      icon = None
+      opacity = 1.0
 
-    if icon is not self._chestnut_icon:
+    if icon is not None and icon is not self._chestnut_icon:
       self._chestnut_fade_time = rl.get_time()
       self._chestnut_icon = icon
-    # the green icon is a status, not a notification: while the large model drives, it stays
-    # up for as long as that is true. The other states keep the brief "something changed" show.
-    visible = loading or icon is self._txt_chestnut_green or rl.get_time() - self._chestnut_fade_time < SET_SPEED_PERSISTENCE
+    # the green icon is a status, not a notification: while the large model drives, it stays up
+    # for as long as that is true. The other states keep the brief "something changed" show.
+    visible = icon is not None and (loading or icon is self._txt_chestnut_green or
+                                    rl.get_time() - self._chestnut_fade_time < SET_SPEED_PERSISTENCE)
     alpha = self._chestnut_alpha_filter.update(visible)
-    if alpha < 1e-2:
+    if alpha < 1e-2 or self._chestnut_icon is None:
       return
 
+    icon = self._chestnut_icon
     # slide with the fade, as the set-speed box does: up into place from the bottom edge when
     # it appears, and back off the bottom edge when it goes
     slide = (1.0 - alpha) * (icon.height + self.CHESTNUT_SLIDE_PX)
