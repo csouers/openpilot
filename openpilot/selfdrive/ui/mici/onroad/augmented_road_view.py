@@ -276,6 +276,7 @@ class AugmentedRoadView(CameraView):
     self._hud_renderer.set_wheel_critical_icon(alert_to_render is not None and not not_animating_out and
                                                alert_to_render.visual_alert == car.CarControl.HUDControl.VisualAlert.steerRequired)
     self._alert_renderer.render(self._content_rect)
+    self._hud_renderer.set_right_panel_width(PANEL_WIDTH if show_navigation else 0)
     self._hud_renderer.render(self._content_rect)
 
     # Show blind-spot alerts on the corresponding screen edge.

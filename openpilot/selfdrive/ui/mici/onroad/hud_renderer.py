@@ -40,6 +40,9 @@ class HudRenderer(Widget):
   # the model-source icon sits 14 px above the bottom edge; add its height so its whole
   # body clears that edge when it slides away
   CHESTNUT_SLIDE_PX = 14
+  # the icon is centered on the compass's vertical axis, which status_icons.py draws
+  # COMPASS_W/2 + COMPASS_MARGIN_RIGHT (60 + 4) in from the right edge of the screen
+  CHESTNUT_CENTER_MARGIN_RIGHT = 64
 
   def __init__(self):
     super().__init__()
@@ -70,11 +73,16 @@ class HudRenderer(Widget):
     self._txt_chestnut_green: rl.Texture = gui_app.texture('icons_mici/chestnut_green.png', 60, 44)
     self._txt_chestnut_orange: rl.Texture = gui_app.texture('icons_mici/chestnut_orange.png', 75, 44)
     self._chestnut_icon: rl.Texture | None = None
+    self._right_panel_width: float = 0
     self._wheel_alpha_filter = FirstOrderFilter(0, 0.05, 1 / gui_app.target_fps)
     self._wheel_y_filter = FirstOrderFilter(0, 0.1, 1 / gui_app.target_fps)
 
     self._set_speed_alpha_filter = FirstOrderFilter(0.0, 0.1, 1 / gui_app.target_fps)
     self._chestnut_alpha_filter = FirstOrderFilter(0.0, 0.1, 1 / gui_app.target_fps)
+
+  def set_right_panel_width(self, width: float):
+    """Width of the panel (navigation) that shrinks this renderer's rect on the right."""
+    self._right_panel_width = width
 
   def set_wheel_critical_icon(self, critical: bool):
     """Set the wheel icon to critical or normal state."""
@@ -164,7 +172,9 @@ class HudRenderer(Widget):
     # slide with the fade, as the set-speed box does: up into place from the bottom edge when
     # it appears, and back off the bottom edge when it goes
     slide = (1.0 - alpha) * (icon.height + self.CHESTNUT_SLIDE_PX)
-    pos = rl.Vector2(rect.x + rect.width - 10 - icon.width,
+    # centered on the compass axis; the nav panel, when shown, narrows our rect by its width
+    center_x = rect.x + rect.width - self._right_panel_width - self.CHESTNUT_CENTER_MARGIN_RIGHT
+    pos = rl.Vector2(center_x - icon.width / 2,
                      rect.y + rect.height - 14 - (self._txt_wheel.height + icon.height) / 2 + slide)
     rl.draw_texture_ex(icon, pos, 0.0, 1.0, rl.Color(255, 255, 255, int(255 * opacity * alpha)))
 
