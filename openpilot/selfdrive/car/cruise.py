@@ -14,11 +14,11 @@ V_CRUISE_UNSET = 255
 V_CRUISE_INITIAL = 40
 IMPERIAL_INCREMENT = round(CV.MPH_TO_KPH, 1)  # round here to avoid rounding errors incrementing set speed
 CRUISE_BUTTON_INCREMENT = 5.  # set speed step per short button press, in the displayed unit (km/h metric, mph imperial)
-CRUISE_BUTTON_HOLD_STEP_MPH = 10.  # set speed step per hold tick (one tick per CRUISE_LONG_PRESS frames, ~1 s)
+CRUISE_BUTTON_HOLD_STEP_MPH = 10.  # set speed step per hold tick (one tick per CRUISE_LONG_PRESS frames, 750 ms)
 
 ButtonEvent = car.CarState.ButtonEvent
 ButtonType = car.CarState.ButtonEvent.Type
-CRUISE_LONG_PRESS = 50
+CRUISE_LONG_PRESS = 75  # frames at 100 Hz: 750 ms hold tick (upstream 50 = 500 ms)
 CRUISE_NEAREST_FUNC = {
   ButtonType.accelCruise: math.ceil,
   ButtonType.decelCruise: math.floor,
