@@ -222,10 +222,9 @@ class SelfdriveD:
     if self.CP.passive:
       return
 
-    # Block resume if cruise never previously enabled
-    resume_pressed = any(be.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for be in CS.buttonEvents)
-    if not self.CP.pcmCruise and CS.vCruise > 250 and resume_pressed:
-      self.events.add(EventName.resumeBlocked)
+    # Fork: resume/accel is allowed to set the first set speed of a session, so the upstream
+    # NO_ENTRY block ("Press Set to Engage" when CS.vCruise is unset) is deliberately gone.
+    # initialize_v_cruise() then seeds v_cruise from vEgo on that first resume engage.
 
     # Handle DM
     if not self.CP.notCar:

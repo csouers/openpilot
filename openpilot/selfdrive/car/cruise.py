@@ -13,6 +13,7 @@ V_CRUISE_MAX = 145
 V_CRUISE_UNSET = 255
 V_CRUISE_INITIAL = 40
 IMPERIAL_INCREMENT = round(CV.MPH_TO_KPH, 1)  # round here to avoid rounding errors incrementing set speed
+CRUISE_BUTTON_INCREMENT = 5.  # set speed step per short button press, in the displayed unit (km/h metric, mph imperial)
 
 ButtonEvent = car.CarState.ButtonEvent
 ButtonType = car.CarState.ButtonEvent.Type
@@ -71,7 +72,7 @@ class VCruiseHelper:
     long_press = False
     button_type = None
 
-    v_cruise_delta = 1. if is_metric else IMPERIAL_INCREMENT
+    v_cruise_delta = CRUISE_BUTTON_INCREMENT if is_metric else CRUISE_BUTTON_INCREMENT * IMPERIAL_INCREMENT
 
     for b in CS.buttonEvents:
       if b.type.raw in self.button_timers and not b.pressed:
