@@ -92,6 +92,13 @@ Safety and Testing
 * panda has additional hardware-in-the-loop [tests](https://github.com/commaai/panda/blob/master/Jenkinsfile).
 * We run the latest openpilot in a testing closet containing 10 comma devices continuously replaying routes.
 
+Credits
+----
+This fork is a personal Honda / body-CAN fork of [commaai/openpilot](https://github.com/commaai/openpilot). It borrows from other openpilot forks, all MIT licensed:
+
+* [**zoompilot**](https://github.com/zoompilot/zoompilot) — the fork-side pattern for running openpilot's large driving models off-device. This fork ports its big-model swap and hand-back bookkeeping (keep driving on the small model until the off-device model is ready), the one-second no-engage window after a swap, and its held-frame / **TAKE CONTROL** rules for when the link lags or drops. See `selfdrive/modeld/modeld.py`, `selfdrive/selfdrived/selfdrived.py`, `selfdrive/ui/ui_state.py`, and the mici HUD's model-source icon.
+* [**jetlink**](https://github.com/zoompilot/jetlink) — the app and protocol that actually runs the model, vendored unchanged as the `jetlink_repo` submodule. The adapter in [`jetlink_adapter.py`](openpilot/jetlink_adapter.py) follows its `jetlink.openpilot.stock` adapter shape. It runs the large model on an Apple silicon Mac's GPU (an M1 Pro here), a Jetson Orin Nano, a Linux PC with an NVIDIA GPU, or an iPhone/iPad, over USB.
+
 <details>
 <summary>MIT Licensed</summary>
 
