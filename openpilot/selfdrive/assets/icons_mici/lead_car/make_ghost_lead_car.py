@@ -26,10 +26,13 @@ import sys
 import numpy as np
 from PIL import Image
 
-# dash/stroke parameters at the SOURCE resolution (636 px wide); scaled to the target
-DASH_PERIOD = 80  # px along the diagonal stripe
-DASH_DUTY = 0.60  # fraction of the period that is dash
-STROKE_DILATE = 3  # outline thickness radius, px
+# dash/stroke parameters at the SOURCE resolution (636 px wide); scaled to the target.
+# The stroke has to survive being drawn far smaller than the bake: the on-screen lead icon is
+# typically 25-60 px wide (LEAD_MIN_ICON_WIDTH is 8.7 px), so a 3 px stroke in a 260 px canvas
+# landed under half a screen pixel and read as a hairline. 5 px at 260 gives ~1.3 px at 40 px.
+DASH_PERIOD = 90  # px along the diagonal stripe
+DASH_DUTY = 0.75  # fraction of the period that is dash (longer dashes, shorter gaps)
+STROKE_DILATE = 5  # outline thickness radius, px
 
 SOURCE_WIDTH = 636
 DEFAULT_TARGET_WIDTH = 260  # the shipped dashed asset's total width, padding included
