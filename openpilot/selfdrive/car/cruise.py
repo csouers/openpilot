@@ -14,6 +14,7 @@ V_CRUISE_UNSET = 255
 V_CRUISE_INITIAL = 40
 IMPERIAL_INCREMENT = round(CV.MPH_TO_KPH, 1)  # round here to avoid rounding errors incrementing set speed
 CRUISE_BUTTON_INCREMENT = 5.  # set speed step per short button press, in the displayed unit (km/h metric, mph imperial)
+CRUISE_BUTTON_HOLD_STEP_MPH = 10.  # set speed step per hold tick (one tick per CRUISE_LONG_PRESS frames, ~1 s)
 
 ButtonEvent = car.CarState.ButtonEvent
 ButtonType = car.CarState.ButtonEvent.Type
@@ -99,7 +100,8 @@ class VCruiseHelper:
     if not self.button_change_states[button_type]["enabled"]:
       return
 
-    v_cruise_delta = v_cruise_delta * (5 if long_press else 1)
+    if long_press:
+      v_cruise_delta = round(CRUISE_BUTTON_HOLD_STEP_MPH * CV.MPH_TO_KPH, 1)
     if long_press and self.v_cruise_kph % v_cruise_delta != 0:  # partial interval
       self.v_cruise_kph = CRUISE_NEAREST_FUNC[button_type](self.v_cruise_kph / v_cruise_delta) * v_cruise_delta
     else:
