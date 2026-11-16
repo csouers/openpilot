@@ -368,6 +368,8 @@ void draw_radar_pane(AppSession *session, UiState *state, Pane *, int pane_index
   ImGui::SameLine();
   if (ImGui::SmallButton("fit")) radar_state.zoom = 1.0f;
   ImGui::SameLine();
+  ImGui::TextDisabled("top-down · ↑ ahead");
+  ImGui::SameLine();
   ImGui::TextDisabled("bus %d · %zu frames · %.0f–%.0fs", data->bus, data->frames.size(),
                       data->t_min, data->t_max);
 
@@ -410,8 +412,10 @@ void draw_radar_pane(AppSession *session, UiState *state, Pane *, int pane_index
                     * std::max(0.25f, radar_state.zoom);
   const float ego_x = rect_min.x + margin_x + usable_w * 0.5f;
   const float ego_y = rect_max.y - margin_y;
+  // Vehicle frame is x forward / y left (same convention as openpilot), and the radar's
+  // LatDist is positive to the left, so screen-right is negative lateral.
   const auto to_screen = [&](float forward, float lateral) {
-    return ImVec2(ego_x + lateral * scale, ego_y - forward * scale);
+    return ImVec2(ego_x - lateral * scale, ego_y - forward * scale);
   };
 
   for (float range = 25.0f; range <= max_forward + 0.5f; range += 25.0f) {
@@ -424,6 +428,15 @@ void draw_radar_pane(AppSession *session, UiState *state, Pane *, int pane_index
   }
   draw_list->AddLine(ImVec2(ego_x, rect_min.y + 2.0f), ImVec2(ego_x, ego_y), GRID_COLOR, 1.0f);
   draw_list->AddRectFilled(ImVec2(ego_x - 5.0f, ego_y - 5.0f), ImVec2(ego_x + 5.0f, ego_y + 5.0f), EGO_COLOR);
+
+  {
+    // lateral axis hints, so the top-down view doesn't get read as a time plot
+    const float hint_y = ego_y - ImGui::GetTextLineHeight() - 6.0f;
+    draw_list->AddText(ImVec2(rect_min.x + 4.0f, hint_y), GRID_LABEL_COLOR, "← left");
+    const char *right_hint = "right →";
+    const float right_w = ImGui::CalcTextSize(right_hint).x;
+    draw_list->AddText(ImVec2(rect_max.x - right_w - 6.0f, hint_y), GRID_LABEL_COLOR, right_hint);
+  }
 
   int shown = 0;
   const RadarPoint2D *hovered = nullptr;
