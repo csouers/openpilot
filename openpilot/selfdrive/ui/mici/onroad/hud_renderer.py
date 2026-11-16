@@ -17,6 +17,13 @@ CRUISE_DISABLED_CHAR = '–'
 
 SET_SPEED_PERSISTENCE = 2.5  # seconds
 
+# bottom row geometry: the model-source icon sits above the bottom edge, on the same row as the
+# (undrawn) wheel icon reference. status_icons.py centres the experimental icon between this and
+# the compass, so both files must agree on where this row is.
+CHESTNUT_MARGIN_BOTTOM = 14
+CHESTNUT_ROW_H = 50   # wheel.png reference height
+CHESTNUT_ICON_H = 44
+
 
 @dataclass(frozen=True)
 class FontSizes:
@@ -71,7 +78,9 @@ class HudRenderer(Widget):
     self._txt_exclamation_point: rl.Texture = gui_app.texture('icons_mici/exclamation_point.png', 9, 44)
     self._txt_chestnut: rl.Texture = gui_app.texture('icons_mici/chestnut.png', 60, 44)
     self._txt_chestnut_green: rl.Texture = gui_app.texture('icons_mici/chestnut_green.png', 60, 44)
-    self._txt_chestnut_orange: rl.Texture = gui_app.texture('icons_mici/chestnut_orange.png', 75, 44)
+    # same 60 px width as the other two states, so the single vertical axis is kept and the icon
+    # stays clear of the blind-spot bar that lives in the outer 26 px of the screen edge
+    self._txt_chestnut_orange: rl.Texture = gui_app.texture('icons_mici/chestnut_orange.png', 60, 44)
     self._chestnut_icon: rl.Texture | None = None
     self._right_panel_width: float = 0
     self._wheel_alpha_filter = FirstOrderFilter(0, 0.05, 1 / gui_app.target_fps)
@@ -79,6 +88,11 @@ class HudRenderer(Widget):
 
     self._set_speed_alpha_filter = FirstOrderFilter(0.0, 0.1, 1 / gui_app.target_fps)
     self._chestnut_alpha_filter = FirstOrderFilter(0.0, 0.1, 1 / gui_app.target_fps)
+
+  @classmethod
+  def chestnut_center_y(cls, rect: rl.Rectangle) -> float:
+    """Vertical centre of the bottom icon row (top edge relative to the full-height rect)."""
+    return rect.y + rect.height - CHESTNUT_MARGIN_BOTTOM - (CHESTNUT_ROW_H + CHESTNUT_ICON_H) / 2
 
   def set_right_panel_width(self, width: float):
     """Width of the panel (navigation) that shrinks this renderer's rect on the right."""
@@ -175,7 +189,7 @@ class HudRenderer(Widget):
     # centered on the compass axis; the nav panel, when shown, narrows our rect by its width
     center_x = rect.x + rect.width - self._right_panel_width - self.CHESTNUT_CENTER_MARGIN_RIGHT
     pos = rl.Vector2(center_x - icon.width / 2,
-                     rect.y + rect.height - 14 - (self._txt_wheel.height + icon.height) / 2 + slide)
+                     self.chestnut_center_y(rect) - icon.height / 2 + slide)
     rl.draw_texture_ex(icon, pos, 0.0, 1.0, rl.Color(255, 255, 255, int(255 * opacity * alpha)))
 
   def _draw_set_speed(self, rect: rl.Rectangle) -> None:

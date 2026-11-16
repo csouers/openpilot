@@ -2,18 +2,16 @@ import raylib_nb as rl
 
 from openpilot.cereal import log
 from openpilot.common.filter_simple import FirstOrderFilter
-from openpilot.selfdrive.ui.mici.onroad import SIDE_PANEL_WIDTH
 from openpilot.selfdrive.ui.mici.onroad.compass import Compass
+from openpilot.selfdrive.ui.mici.onroad.hud_renderer import HudRenderer
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.widgets import Widget
 
 LaneChangeState = log.LaneChangeState
 
-# Vertical space the status icons occupy at the top of the rail
+# rail top for the (currently disabled) confidence ball; the three icons now span this
 STATUS_ICONS_HEIGHT = 116
-# extra downward nudge for the experimental icon out of the compass-block centre
-EXPERIMENTAL_MODE_ICON_DROP = 6
 # how long the experimental icon trails the compass when the pair slides in/out
 EXPERIMENTAL_ICON_DELAY_S = 0.18
 # orange overlay on the (white) experimental-mode icon so it reads as its own state
@@ -80,26 +78,20 @@ class StatusIconColumn(Widget):
     rl.draw_texture_ex(texture, pos, 0.0, 1.0, tint)
 
   def _render(self, _):
-    panel = rl.Rectangle(
-      self.rect.x + self.rect.width - SIDE_PANEL_WIDTH,
-      self.rect.y,
-      SIDE_PANEL_WIDTH,
-      self.rect.height,
-    )
-
     # compass in the top-right corner (right-aligned to the screen edge)
-    self._compass.render(rl.Rectangle(self.rect.x + self.rect.width - COMPASS_W - COMPASS_MARGIN_RIGHT,
-                                     self.rect.y + COMPASS_MARGIN_TOP,
-                                     COMPASS_W, COMPASS_H))
+    compass_rect = rl.Rectangle(self.rect.x + self.rect.width - COMPASS_W - COMPASS_MARGIN_RIGHT,
+                               self.rect.y + COMPASS_MARGIN_TOP,
+                               COMPASS_W, COMPASS_H)
+    self._compass.render(compass_rect)
 
     slide = self._slide.x
     if slide < 0.02:
       return
 
-    # horizontally centered on the compass (the 60 px rail is narrower than it), and below it
-    center_x = self.rect.x + self.rect.width - COMPASS_W / 2 - COMPASS_MARGIN_RIGHT
-    icons_top = panel.y + COMPASS_MARGIN_TOP + COMPASS_H
-    center_y = icons_top + (panel.y + STATUS_ICONS_HEIGHT - icons_top) / 2 + EXPERIMENTAL_MODE_ICON_DROP
+    # all three icons share one vertical axis (the compass's centre line): the compass at the
+    # top, the model-source icon near the bottom edge, the experimental icon exactly between them
+    center_x = compass_rect.x + COMPASS_W / 2
+    center_y = (compass_rect.y + COMPASS_H / 2 + HudRenderer.chestnut_center_y(self.rect)) / 2
 
     # slide in from the right edge (the compass slides in through the top): at slide=0 the icon
     # sits fully beyond the right edge, so it emerges from the edge and tucks back out
