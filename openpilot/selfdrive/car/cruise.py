@@ -1,4 +1,3 @@
-import math
 import numpy as np
 
 from opendbc.car.structs import car
@@ -19,10 +18,6 @@ CRUISE_BUTTON_HOLD_STEP_MPH = 10.  # set speed step per hold tick (one tick per 
 ButtonEvent = car.CarState.ButtonEvent
 ButtonType = car.CarState.ButtonEvent.Type
 CRUISE_LONG_PRESS = 35  # frames at 100 Hz: 350 ms hold tick (upstream 50 = 500 ms)
-CRUISE_NEAREST_FUNC = {
-  ButtonType.accelCruise: math.ceil,
-  ButtonType.decelCruise: math.floor,
-}
 CRUISE_INTERVAL_SIGN = {
   ButtonType.accelCruise: +1,
   ButtonType.decelCruise: -1,
@@ -101,9 +96,10 @@ class VCruiseHelper:
       return
 
     if long_press:
-      v_cruise_delta = round(CRUISE_BUTTON_HOLD_STEP_MPH * CV.MPH_TO_KPH, 1)
-    if long_press and self.v_cruise_kph % v_cruise_delta != 0:  # partial interval
-      self.v_cruise_kph = CRUISE_NEAREST_FUNC[button_type](self.v_cruise_kph / v_cruise_delta) * v_cruise_delta
+      # Hold: a plain fixed 10 mph step per tick. Upstream's partial-interval snapping can't be
+      # used here: 10 mph in kph is not exactly representable, so after a snapped tick the modulo
+      # test stays non-zero and re-snaps to the same value, freezing the set speed.
+      self.v_cruise_kph += CRUISE_BUTTON_HOLD_STEP_MPH * CV.MPH_TO_KPH * CRUISE_INTERVAL_SIGN[button_type]
     else:
       self.v_cruise_kph += v_cruise_delta * CRUISE_INTERVAL_SIGN[button_type]
 
