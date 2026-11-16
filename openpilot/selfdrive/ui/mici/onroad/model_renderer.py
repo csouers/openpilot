@@ -61,7 +61,10 @@ class ModelRenderer(BaseModelRenderer):
     # loaded near the max draw size (~the close-lead cap), then mipmap-filtered so minification
     # to far-lead sizes stays clean instead of shimmering like plain bilinear
     self._txt_lead_car = gui_app.texture('icons_mici/lead_car/lead_car.png', 260, 156, keep_aspect_ratio=True)
-    self._txt_lead_car_ghost = gui_app.texture('icons_mici/lead_car/lead_car_ghost.png', 260, 156, keep_aspect_ratio=True)
+    # the ghost bakes a 5 px transparent bleed so its stroke is never flush against the canvas
+    # edge; the load box is scaled by the same factor (260/250) so the drawn car stays the same
+    # size as the solid one and the icon does not pop when the lead flips radar <-> vision
+    self._txt_lead_car_ghost = gui_app.texture('icons_mici/lead_car/lead_car_ghost.png', 270, 168, keep_aspect_ratio=True)
     for tex in (self._txt_lead_car, self._txt_lead_car_ghost):
       rl.gen_texture_mipmaps(tex)
       rl.set_texture_filter(tex, rl.TextureFilter.TEXTURE_FILTER_TRILINEAR)

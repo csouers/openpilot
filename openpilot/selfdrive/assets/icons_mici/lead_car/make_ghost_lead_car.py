@@ -3,12 +3,19 @@
 
 Mirrors hondacan.py HUD_LEAD: 2=solid lead car (radar-fixed), 1=ghost
 (vision-only lead). The ghost is baked natively at the renderer's load size
-(130 px wide) so dash/stroke geometry is tuned for the on-screen scale instead
+(260 px wide) so dash/stroke geometry is tuned for the on-screen scale instead
 of surviving a ~5x minification of the 636 px source (which shimmers badly).
 
-NOTE: the shipped asset is this generated dashed outline (260x157) again, reverted
-from the pixel-art Boo-on-kart sprite (200x172 RGBA, from boo-ghost.gif) that was
-live between 4d497f2246 and now. The Boo sprite is still reachable at
+Two things this bake gets right that the old one did not:
+  * the body is inset by PAD px, so the stroke is never flush against the canvas
+    edge (where resampling and the onscreen scissor can shave it), and
+  * the silhouette mask is padded before eroding, so body pixels that touch an
+    edge still count as outline — the old erode() treated the canvas border as
+    interior and left the roof crest and underbody unstroked ("cut off in spots").
+
+NOTE: the shipped asset is this generated dashed outline again, reverted from the
+pixel-art Boo-on-kart sprite (200x172 RGBA, from boo-ghost.gif) that was live
+between 4d497f2246 and now. The Boo sprite is still reachable at
 `git show 4d497f2246:.../lead_car_ghost.png` if it is ever wanted back.
 
 Run from this directory:  python3 make_ghost_lead_car.py [target_width]
@@ -25,16 +32,19 @@ DASH_DUTY = 0.60  # fraction of the period that is dash
 STROKE_DILATE = 3  # outline thickness radius, px
 
 SOURCE_WIDTH = 636
-DEFAULT_TARGET_WIDTH = 260  # the shipped dashed asset's size (the 130 px bake read as a smudge)
+DEFAULT_TARGET_WIDTH = 260  # the shipped dashed asset's total width, padding included
+PAD = 5  # transparent bleed around the body at the default target size, px
 
 
 def erode(mask):
-  er = mask.copy()
-  er[1:, :] &= mask[:-1, :]
-  er[:-1, :] &= mask[1:, :]
-  er[:, 1:] &= mask[:, :-1]
-  er[:, :-1] &= mask[:, 1:]
-  return er
+  """Erode by one pixel, treating everything outside the array as background."""
+  m = np.pad(mask, 1, constant_values=False)
+  er = m.copy()
+  er[1:, :] &= m[:-1, :]
+  er[:-1, :] &= m[1:, :]
+  er[:, 1:] &= m[:, :-1]
+  er[:, :-1] &= m[:, 1:]
+  return er[1:-1, 1:-1]
 
 
 def dilate(mask, radius):
@@ -54,12 +64,16 @@ def main():
   src = Image.open(os.path.join(here, 'lead_car.png')).convert('RGBA')
 
   target_width = int(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_TARGET_WIDTH
-  scale = target_width / SOURCE_WIDTH
-  target_height = round(src.height * scale)
+  pad = max(1, round(PAD * target_width / DEFAULT_TARGET_WIDTH))
+  body_width = target_width - 2 * pad
+  scale = body_width / SOURCE_WIDTH
+  body_height = round(src.height * scale)
+  target_height = body_height + 2 * pad
 
   # downscale the soft alpha first, then threshold: keeps the silhouette clean at target scale
-  small = src.resize((target_width, target_height), Image.LANCZOS)
-  body = np.asarray(small)[:, :, 3] > 128
+  small = src.resize((body_width, body_height), Image.LANCZOS)
+  body = np.zeros((target_height, target_width), dtype=bool)
+  body[pad:pad + body_height, pad:pad + body_width] = np.asarray(small)[:, :, 3] > 128
 
   outline = body & ~erode(body)
   stroke = dilate(outline, max(1, round(STROKE_DILATE * scale)))
@@ -67,7 +81,14 @@ def main():
   dash_period = max(2, round(DASH_PERIOD * scale))
   dash_len = max(1, round(dash_period * DASH_DUTY))
   yy, xx = np.mgrid[0:target_height, 0:target_width]
-  dashes = stroke & (((xx + yy) % dash_period) < dash_len)
+
+  # phase the dashes so one sits dead centre on the body's topmost point (the roof crest)
+  # instead of a gap landing there
+  top_y = np.argmax(body.any(axis=1))
+  top_x = int(np.median(np.nonzero(body[top_y])[0]))
+  phase = (top_x + top_y - dash_len / 2.0) % dash_period
+
+  dashes = stroke & (((xx + yy - phase) % dash_period) < dash_len)
 
   out = np.zeros((target_height, target_width, 4), dtype=np.uint8)
   out[..., 0] = 255
@@ -76,8 +97,8 @@ def main():
   out[..., 3] = np.where(dashes, 255, 0)
   out_name = 'lead_car_ghost.png'
   Image.fromarray(out, 'RGBA').save(os.path.join(here, out_name))
-  print(f"wrote {out_name} ({target_width}x{target_height}, "
-          f"dash {dash_len}/{dash_period}px, stroke {2 * round(STROKE_DILATE * scale) + 1}px)")
+  print(f"wrote {out_name} ({target_width}x{target_height}, pad {pad}px, "
+        f"dash {dash_len}/{dash_period}px, stroke {2 * max(1, round(STROKE_DILATE * scale)) + 1}px)")
 
 
 if __name__ == '__main__':
