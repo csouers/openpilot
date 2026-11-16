@@ -30,7 +30,8 @@ class StatusIconColumn(Widget):
   def __init__(self):
     super().__init__()
 
-    self._experimental_texture = gui_app.texture("icons_mici/experimental_mode.png", 48, 48)
+    # 55 px = 15% bigger than the original 48
+    self._experimental_texture = gui_app.texture("icons_mici/experimental_mode.png", 55, 55)
     self._compass = Compass()
 
     self._experimental_mode = False
