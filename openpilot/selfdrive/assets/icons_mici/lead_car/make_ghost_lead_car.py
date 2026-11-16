@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Generate lead_car_ghost_dashed.png — Honda-style dashed-outline ghost of lead_car.png.
+"""Generate lead_car_ghost.png — Honda-style dashed-outline ghost of lead_car.png.
 
 Mirrors hondacan.py HUD_LEAD: 2=solid lead car (radar-fixed), 1=ghost
 (vision-only lead). The ghost is baked natively at the renderer's load size
 (130 px wide) so dash/stroke geometry is tuned for the on-screen scale instead
 of surviving a ~5x minification of the 636 px source (which shimmers badly).
 
-NOTE: the SHIPPED ghost asset `lead_car_ghost.png` is now the pixel-art Boo-on-kart
-sprite (200x172 RGBA, transparent background, taken from boo-ghost.gif). This
-script is kept for reference and writes `lead_car_ghost_dashed.png` instead, so
-re-running it never clobbers the live icon.
+NOTE: the shipped asset is this generated dashed outline (260x157) again, reverted
+from the pixel-art Boo-on-kart sprite (200x172 RGBA, from boo-ghost.gif) that was
+live between 4d497f2246 and now. The Boo sprite is still reachable at
+`git show 4d497f2246:.../lead_car_ghost.png` if it is ever wanted back.
 
 Run from this directory:  python3 make_ghost_lead_car.py [target_width]
 """
@@ -25,7 +25,7 @@ DASH_DUTY = 0.60  # fraction of the period that is dash
 STROKE_DILATE = 3  # outline thickness radius, px
 
 SOURCE_WIDTH = 636
-DEFAULT_TARGET_WIDTH = 130  # matches the renderer's gui_app.texture load size
+DEFAULT_TARGET_WIDTH = 260  # the shipped dashed asset's size (the 130 px bake read as a smudge)
 
 
 def erode(mask):
@@ -74,7 +74,7 @@ def main():
   out[..., 1] = 255
   out[..., 2] = 255
   out[..., 3] = np.where(dashes, 255, 0)
-  out_name = 'lead_car_ghost_dashed.png'
+  out_name = 'lead_car_ghost.png'
   Image.fromarray(out, 'RGBA').save(os.path.join(here, out_name))
   print(f"wrote {out_name} ({target_width}x{target_height}, "
           f"dash {dash_len}/{dash_period}px, stroke {2 * round(STROKE_DILATE * scale) + 1}px)")
