@@ -13,9 +13,19 @@ Two things this bake gets right that the old one did not:
     edge still count as outline — the old erode() treated the canvas border as
     interior and left the roof crest and underbody unstroked ("cut off in spots").
 
-NOTE: the shipped asset is this generated dashed outline again, reverted from the
-pixel-art Boo-on-kart sprite (200x172 RGBA, from boo-ghost.gif) that was live
-between 4d497f2246 and now. The Boo sprite is still reachable at
+NOTE: the shipped asset is no longer baked from lead_car.png. The live ghost is
+`lead_car_ghost.svg` (a hand-drawn dashed outline: rounded body, solid mirror
+blobs, larger dashes), rasterized to lead_car_ghost.png at 260x161 with a 5 px
+transparent pad. Re-bake with:
+
+  rsvg-convert -b none -w 2540 lead_car_ghost.svg -o /tmp/ghost_hi.png
+  # then crop to the alpha bbox, resize the body to 250 px wide, pad 5 px,
+  # force rgb=255 and hard-threshold alpha, save as lead_car_ghost.png
+
+This script is kept for regenerating the old dashed lead_car.png outline if that
+design is ever wanted back. The pixel-art Boo-on-kart sprite (200x172 RGBA, from
+boo-ghost.gif) that was live between 4d497f2246 and the dashed outline is still
+reachable at `git show 4d497f2246:.../lead_car_ghost.png`. The Boo sprite is still reachable at
 `git show 4d497f2246:.../lead_car_ghost.png` if it is ever wanted back.
 
 Run from this directory:  python3 make_ghost_lead_car.py [target_width]
