@@ -20,26 +20,21 @@ J_CRUISE_VALS = [1.6, 1.2, 0.8, 0.6]
 J_CRUISE_BP = [0., 10.0, 25., 40.]
 A_CRUISE_MIN = -0.5
 CONTROL_N_T_IDX = ModelConstants.T_IDXS[:CONTROL_N]
-ALLOW_THROTTLE_THRESHOLD = 0.4
-MIN_ALLOW_THROTTLE_SPEED = 2.5
 
 
 def get_max_accel(v_ego):
   return np.interp(v_ego, A_CRUISE_MAX_BP, A_CRUISE_MAX_VALS)
 
 
-def get_coast_accel(pitch):
-  return np.sin(pitch) * -5.65 - 0.3  # fitted from data using xx/projects/allow_throttle/compute_coast_accel.py
-
-
-def get_cruise_accel(e2e, v_cruise, v_ego, a_cruise_prev, a_target_prev, dt, accel_coast, allow_throttle):
+def get_cruise_accel(e2e, v_cruise, v_ego, a_cruise_prev, a_target_prev, dt):
   max_accel = ACCEL_MAX if e2e else get_max_accel(v_ego)
 
-  if not e2e:
-    if not allow_throttle:
-      clipped_accel_coast = max(accel_coast, ACCEL_MIN)
-      coast_limit = np.interp(v_ego, [MIN_ALLOW_THROTTLE_SPEED, MIN_ALLOW_THROTTLE_SPEED*2], [max_accel, clipped_accel_coast])
-      max_accel = min(max_accel, coast_limit)
+  # Fork: the model's gas-press prediction no longer gates throttle (upstream coasts the cruise
+  # command down to get_coast_accel(pitch) whenever the model thinks the driver is about to press
+  # the gas).  That gate fires exactly when acceleration is wanted - clearing a slow lead, a
+  # resume, a merge - and it is not just a cap: above ~5 m/s the upper clip becomes negative, so
+  # the car actively bled speed while sitting below the set speed.  ACCEL_MAX and the car's own
+  # limits are the only ceilings now.
 
   # Fork: no 1 s filter on the cruise error (upstream #39266 / 903260a25).  Filtering the error
   # made the command lag it by ~1 s, so the car held ~0.9 m/s^2 for ~1.5 s past the set speed
@@ -69,11 +64,6 @@ class LongitudinalPlanner:
     self.j_desired_trajectory = np.zeros(CONTROL_N)
 
   def update(self, sm):
-    if len(sm['carControl'].orientationNED) == 3:
-      accel_coast = get_coast_accel(sm['carControl'].orientationNED[1])
-    else:
-      accel_coast = ACCEL_MAX
-
     v_ego = sm['carState'].vEgo
     v_cruise_kph = min(sm['carState'].vCruise, V_CRUISE_MAX)
     v_cruise = v_cruise_kph * CV.KPH_TO_MS
@@ -88,9 +78,9 @@ class LongitudinalPlanner:
     v_cruise_initialized = sm['carState'].vCruise != V_CRUISE_UNSET
     reset_state = reset_state or not v_cruise_initialized
 
-    throttle_probs = sm['modelV2'].meta.disengagePredictions.gasPressProbs
-    throttle_prob = throttle_probs[1] if len(throttle_probs) > 1 else 1.0
-    self.allow_throttle = throttle_prob > ALLOW_THROTTLE_THRESHOLD or v_ego <= MIN_ALLOW_THROTTLE_SPEED
+    # Fork: throttle is never gated on the model's gas-press prediction.  The field is still
+    # published (logs/tools read it) and now always reports that throttle is allowed.
+    self.allow_throttle = True
 
     if reset_state:
       self.v_desired_filter.x = v_ego
@@ -130,8 +120,7 @@ class LongitudinalPlanner:
     output_should_stop_e2e = sm['modelV2'].action.shouldStop
 
     self.a_cruise = get_cruise_accel(sm['selfdriveState'].experimentalMode, v_cruise, v_ego,
-                                     self.a_cruise, self.output_a_target,
-                                     self.dt, accel_coast, self.allow_throttle)
+                                     self.a_cruise, self.output_a_target, self.dt)
     cruise_should_stop = should_stop(v_ego, self.a_cruise)
 
     candidates = [(output_a_target_mpc, self.mpc.source, output_should_stop_mpc),
