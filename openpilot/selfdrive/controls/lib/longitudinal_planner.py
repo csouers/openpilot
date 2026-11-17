@@ -14,7 +14,10 @@ from openpilot.selfdrive.controls.lib.drive_helpers import CONTROL_N, get_accel_
 from openpilot.selfdrive.car.cruise import V_CRUISE_MAX, V_CRUISE_UNSET
 from openpilot.common.swaglog import cloudlog
 
-A_CRUISE_MAX_VALS = [1.6, 1.2, 0.8, 0.6]
+# Fork: upstream's curve decays hard with speed (1.6 -> 0.6 m/s^2), which reads as "pulls then gives
+# up". Measured on the car (rlog, flat ground): the plant delivers ~0.023 m/s^2 per gas unit at any
+# speed, so gas is linear in requested accel and 2.0 m/s^2 only needs gas ~88 (table max 160).
+A_CRUISE_MAX_VALS = [2.0, 1.6, 1.1, 0.8]
 A_CRUISE_MAX_BP = [0., 10.0, 25., 40.]
 J_CRUISE_VALS = [1.6, 1.2, 0.8, 0.6]
 J_CRUISE_BP = [0., 10.0, 25., 40.]
