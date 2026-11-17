@@ -11,9 +11,14 @@ V_CRUISE_MIN = 8
 V_CRUISE_MAX = 145
 V_CRUISE_UNSET = 255
 V_CRUISE_INITIAL = 40
-IMPERIAL_INCREMENT = round(CV.MPH_TO_KPH, 1)  # round here to avoid rounding errors incrementing set speed
+IMPERIAL_INCREMENT = round(CV.MPH_TO_KPH, 1)  # legacy ~1 mph step, kept for tests/back-compat
 CRUISE_BUTTON_INCREMENT = 5.  # set speed step per short button press, in the displayed unit (km/h metric, mph imperial)
 CRUISE_BUTTON_HOLD_STEP_MPH = 5.  # set speed step per hold tick (one tick per CRUISE_LONG_PRESS frames, 350 ms)
+
+# The set speed is stored in kph, but in imperial the driver expects every set speed to be a round
+# multiple of 5 mph. 5 mph is 8.04672 kph: stepping by the rounded 1.6 kph/mph gives 8.0 kph, which
+# drifts 0.05 mph per press, so imperial set speeds are snapped to this exact grid in displayed mph.
+IMPERIAL_CRUISE_STEP_KPH = CRUISE_BUTTON_INCREMENT * CV.MPH_TO_KPH
 
 ButtonEvent = car.CarState.ButtonEvent
 ButtonType = car.CarState.ButtonEvent.Type
@@ -68,7 +73,7 @@ class VCruiseHelper:
     long_press = False
     button_type = None
 
-    v_cruise_delta = CRUISE_BUTTON_INCREMENT if is_metric else CRUISE_BUTTON_INCREMENT * IMPERIAL_INCREMENT
+    v_cruise_delta = CRUISE_BUTTON_INCREMENT if is_metric else IMPERIAL_CRUISE_STEP_KPH
 
     for b in CS.buttonEvents:
       if b.type.raw in self.button_timers and not b.pressed:
@@ -107,7 +112,15 @@ class VCruiseHelper:
     if CS.gasPressed and button_type in (ButtonType.decelCruise, ButtonType.setCruise):
       self.v_cruise_kph = max(self.v_cruise_kph, CS.vEgo * CV.MS_TO_KPH)
 
-    self.v_cruise_kph = np.clip(round(self.v_cruise_kph, 1), V_CRUISE_MIN, V_CRUISE_MAX)
+    self.v_cruise_kph = self._snap_v_cruise(np.clip(round(self.v_cruise_kph, 1), V_CRUISE_MIN, V_CRUISE_MAX), is_metric)
+
+  @staticmethod
+  def _snap_v_cruise(v_cruise_kph, is_metric):
+    """Snap the set speed to the displayed-unit button grid so it is always a round 5."""
+    if is_metric:
+      return round(v_cruise_kph, 1)
+    snapped = round(v_cruise_kph / IMPERIAL_CRUISE_STEP_KPH) * IMPERIAL_CRUISE_STEP_KPH
+    return min(max(snapped, V_CRUISE_MIN), V_CRUISE_MAX)
 
   def update_button_timers(self, CS, enabled):
     # increment timer for buttons still pressed
@@ -121,7 +134,7 @@ class VCruiseHelper:
         self.button_timers[b.type.raw] = 1 if b.pressed else 0
         self.button_change_states[b.type.raw] = {"standstill": CS.cruiseState.standstill, "enabled": enabled}
 
-  def initialize_v_cruise(self, CS, initial_speed: int) -> None:
+  def initialize_v_cruise(self, CS, initial_speed: int, is_metric: bool = True) -> None:
     # initializing is handled by the PCM
     if self.CP.pcmCruise:
       return
@@ -130,5 +143,7 @@ class VCruiseHelper:
       self.v_cruise_kph = self.v_cruise_kph_last
     else:
       self.v_cruise_kph = int(round(np.clip(max(CS.vEgo * CV.MS_TO_KPH, initial_speed), V_CRUISE_INITIAL, V_CRUISE_MAX)))
+      # setting at some random speed should still give a round 5 in the displayed unit
+      self.v_cruise_kph = self._snap_v_cruise(self.v_cruise_kph, is_metric)
 
     self.v_cruise_cluster_kph = self.v_cruise_kph

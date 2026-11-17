@@ -4,7 +4,7 @@ import numpy as np
 from openpilot.common.test import OpenpilotTestCase
 from openpilot.common.parameterized import parameterized_class
 from openpilot.cereal import log
-from openpilot.selfdrive.car.cruise import VCruiseHelper, V_CRUISE_MIN, V_CRUISE_MAX, V_CRUISE_INITIAL, IMPERIAL_INCREMENT
+from openpilot.selfdrive.car.cruise import VCruiseHelper, V_CRUISE_MIN, V_CRUISE_MAX, V_CRUISE_INITIAL, IMPERIAL_CRUISE_STEP_KPH
 from opendbc.car.structs import car
 from openpilot.common.constants import CV
 from openpilot.selfdrive.test.longitudinal_maneuvers.maneuver import Maneuver
@@ -57,7 +57,7 @@ class TestVCruiseHelper(OpenpilotTestCase):
 
   def enable(self, v_ego):
     # Simulates user pressing set with a current speed
-    self.v_cruise_helper.initialize_v_cruise(car.CarState(vEgo=v_ego), V_CRUISE_INITIAL)
+    self.v_cruise_helper.initialize_v_cruise(car.CarState(vEgo=v_ego), V_CRUISE_INITIAL, is_metric=False)
 
   def test_adjust_speed(self):
     """
@@ -121,9 +121,12 @@ class TestVCruiseHelper(OpenpilotTestCase):
       self.enable(V_CRUISE_INITIAL * CV.KPH_TO_MS)
 
       # first decrement speed, then perform gas pressed logic
-      expected_v_cruise_kph = self.v_cruise_helper.v_cruise_kph - IMPERIAL_INCREMENT
+      expected_v_cruise_kph = self.v_cruise_helper.v_cruise_kph - IMPERIAL_CRUISE_STEP_KPH
       expected_v_cruise_kph = max(expected_v_cruise_kph, v_ego * CV.MS_TO_KPH)  # clip to min of vEgo
       expected_v_cruise_kph = float(np.clip(round(expected_v_cruise_kph, 1), V_CRUISE_MIN, V_CRUISE_MAX))
+      # imperial set speeds live on the 5 mph grid
+      expected_v_cruise_kph = min(max(round(expected_v_cruise_kph / IMPERIAL_CRUISE_STEP_KPH) * IMPERIAL_CRUISE_STEP_KPH,
+                                       V_CRUISE_MIN), V_CRUISE_MAX)
 
       CS = car.CarState(vEgo=float(v_ego), gasPressed=True, cruiseState={"available": True})
       CS.buttonEvents = [ButtonEvent(type=ButtonType.decelCruise, pressed=False)]
@@ -132,7 +135,7 @@ class TestVCruiseHelper(OpenpilotTestCase):
       # TODO: fix skipping first run due to enabled on rising edge exception
       if v_ego == 0.0:
         continue
-      assert expected_v_cruise_kph == self.v_cruise_helper.v_cruise_kph
+      assert abs(expected_v_cruise_kph - self.v_cruise_helper.v_cruise_kph) < 1e-6
 
   def test_initialize_v_cruise(self):
     """
@@ -146,3 +149,37 @@ class TestVCruiseHelper(OpenpilotTestCase):
       self.enable(float(v_ego))
       assert V_CRUISE_INITIAL <= self.v_cruise_helper.v_cruise_kph <= V_CRUISE_MAX
       assert self.v_cruise_helper.v_cruise_initialized
+
+  def test_imperial_set_speed_on_5_mph_grid(self):
+    """
+    Asserts imperial set speeds always land on a round 5 mph, with no drift over repeated presses.
+    """
+    def assert_on_grid(v_cruise_kph):
+      mph = v_cruise_kph * CV.KPH_TO_MPH
+      assert abs(mph - round(mph)) < 1e-3, f'{mph:.3f} mph is not a whole mph'
+      assert round(mph) % 5 == 0, f'{mph:.3f} mph is not a multiple of 5'
+
+    # setting at an arbitrary speed snaps to the grid
+    for v_ego in np.linspace(0, 40, 81):
+      self.reset_cruise_speed_state()
+      self.enable(float(v_ego))
+      assert_on_grid(self.v_cruise_helper.v_cruise_kph)
+
+    # repeated presses walk the grid in exact 5 mph steps
+    def press(btn, pressed):
+      CS = car.CarState(vEgo=0.0, cruiseState={"available": True})
+      CS.buttonEvents = [ButtonEvent(type=btn, pressed=pressed)]
+      self.v_cruise_helper.update_v_cruise(CS, enabled=True, is_metric=False)
+
+    self.reset_cruise_speed_state()
+    self.enable(30 * CV.MPH_TO_KPH * CV.KPH_TO_MS)
+    for btn in (ButtonType.accelCruise, ButtonType.decelCruise):
+      for _ in range(15):
+        before_kph = self.v_cruise_helper.v_cruise_kph
+        press(btn, True)
+        press(btn, False)
+        after_kph = self.v_cruise_helper.v_cruise_kph
+        assert_on_grid(after_kph)
+        if after_kph != before_kph:  # clamped at V_CRUISE_MIN/V_CRUISE_MAX
+          assert abs(abs(after_kph - before_kph) - IMPERIAL_CRUISE_STEP_KPH) < 1e-3, \
+            f'{before_kph:.3f} -> {after_kph:.3f} kph'
