@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import math
 
 from openpilot.cereal import log
@@ -155,7 +156,11 @@ class MiciHomeLayout(Widget):
     ], spacing=18)
 
     self._openpilot_label = UnifiedLabel("openpilot", font_size=96, font_weight=FontWeight.DISPLAY, max_width=480, wrap_text=False)
-    self._version_commit_label = UnifiedLabel("", font_size=42, text_color=rl.GRAY, font_weight=FontWeight.ROMAN, max_width=480, wrap_text=False)
+    self._version_label = UnifiedLabel("", font_size=36, font_weight=FontWeight.ROMAN, max_width=480, wrap_text=False)
+    self._large_version_label = UnifiedLabel("", font_size=64, text_color=rl.GRAY, font_weight=FontWeight.ROMAN, max_width=480, wrap_text=False)
+    self._date_label = UnifiedLabel("", font_size=36, text_color=rl.GRAY, font_weight=FontWeight.ROMAN, max_width=480, wrap_text=False)
+    self._branch_label = UnifiedLabel("", font_size=36, text_color=rl.GRAY, font_weight=FontWeight.ROMAN, scroll=True)
+    self._version_commit_label = UnifiedLabel("", font_size=36, text_color=rl.GRAY, font_weight=FontWeight.ROMAN, max_width=480, wrap_text=False)
 
     self._wake_pending = True  # greet on boot
     self._wake_start: float | None = None
@@ -191,7 +196,7 @@ class MiciHomeLayout(Widget):
     elif self._on_settings_click:
       self._on_settings_click()
 
-  def _get_version_text(self) -> tuple[str, str, str] | None:
+  def _get_version_text(self) -> tuple[str, str, str, str] | None:
     version = ui_state.params.get("Version")
     branch = ui_state.params.get("GitBranch")
     commit = ui_state.params.get("GitCommit")
@@ -199,7 +204,15 @@ class MiciHomeLayout(Widget):
     if not all((version, branch, commit)):
       return None
 
-    return version, branch, commit[:7]
+    commit_date_raw = ui_state.params.get("GitCommitDate")
+    try:
+      # GitCommitDate format from get_commit_date(): '%ct %ci' e.g. "'1708012345 2024-02-15 ...'"
+      unix_ts = int(commit_date_raw.strip("'").split()[0])
+      date_str = datetime.datetime.fromtimestamp(unix_ts).strftime("%b %d")
+    except (ValueError, IndexError, TypeError, AttributeError):
+      date_str = ""
+
+    return version, branch, commit[:7], date_str
 
   def _render(self, _):
     # start once home is actually on screen, e.g. after swiping past boot alerts
@@ -237,7 +250,7 @@ class MiciHomeLayout(Widget):
       if not release_branch:
         # 2nd line
         self._version_commit_label.set_text(self._version_text[2])
-        self._version_commit_label.set_position(version_pos.x, version_pos.y)
+        self._version_commit_label.set_position(version_pos.x, version_pos.y + self._date_label.font_size + 7)
         self._version_commit_label.render()
 
       version_h = self._date_label.font_size * (1 if release_branch else 2) + 7
