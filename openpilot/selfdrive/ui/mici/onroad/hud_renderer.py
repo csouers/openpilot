@@ -121,7 +121,9 @@ class HudRenderer(Widget):
     self._txt_wheel_glow, self._txt_wheel_highlight = _wheel_effect_textures('icons_mici/wheel.png', WHEEL_SIZE)
     self._txt_chestnut: rl.Texture = gui_app.texture('icons_mici/chestnut.png', 48, 36)
     self._txt_chestnut_green: rl.Texture = gui_app.texture('icons_mici/chestnut_green.png', 48, 36)
-    self._txt_chestnut_orange: rl.Texture = gui_app.texture('icons_mici/chestnut_orange.png', 61, 36)
+    # same 48 px width as the other two states, so the single vertical axis is kept and the icon
+    # stays clear of the blind-spot bar that lives in the outer 26 px of the screen edge
+    self._txt_chestnut_orange: rl.Texture = gui_app.texture('icons_mici/chestnut_orange.png', 48, 36)
     self._chestnut_icon: rl.Texture | None = None
     self._right_panel_width: float = 0
     self._wheel_critical_filter = FirstOrderFilter(0, STATUS_FADE_RC, 1 / gui_app.target_fps)
@@ -269,7 +271,8 @@ class HudRenderer(Widget):
 
   def _draw_set_speed(self, rect: rl.Rectangle) -> None:
     """Draw the MAX speed indicator box."""
-    alpha = self._set_speed_alpha_filter.update(0 < rl.get_time() - self._set_speed_changed_time < SET_SPEED_PERSISTENCE and self._can_draw_top_icons)
+    # fork: the MAX indicator stays up while it may be drawn (7cd4f5d45 dropped the 2.5 s persistence)
+    alpha = self._set_speed_alpha_filter.update(float(self._can_draw_top_icons))
     alpha = self._set_speed_alpha = alpha * (1 - status_fade.weight(UIStatus.DISENGAGED))
     if alpha < 1e-2:
       return

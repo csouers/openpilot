@@ -345,8 +345,10 @@ class AugmentedRoadView(CameraView):
     if show_navigation:
       left_rect = rl.Rectangle(self._content_rect.x, self._content_rect.y, LEFT_COLUMN_WIDTH, self._content_rect.height)
 
-    # Grey out DMoji when disengaged unless AlwaysOnDM is enabled. In the side panel nothing overlaps it, otherwise it hides under the set speed
-    self._driver_state_renderer.set_should_draw(not show_navigation or not self._hud_renderer.drawing_top_icons())
+    # Fork decision (c2f8c0ebd "vibed: less clutter. brighter lead. no cam view."): we never draw the
+    # driver-facing DMoji, unlike upstream. The renderer object stays because the side-panel geometry
+    # below uses its rect, and this keeps the panel layout upstream-shaped.
+    self._driver_state_renderer.set_should_draw(False)
     self._driver_state_renderer.set_dimmed(1.0 if not ui_state.started else 0.0 if ui_state.always_on_dm else status_fade.weight(UIStatus.DISENGAGED))
     self._driver_state_renderer.set_show_under_alerts(not show_navigation)
     # the 52px cone is centered 36px from the top left
