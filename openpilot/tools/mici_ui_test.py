@@ -41,7 +41,7 @@ from openpilot.system.ui.widgets import Widget
 import raylib_nb as rl
 
 from cereal import log
-from openpilot.selfdrive.ui.ui_state import ui_state
+from openpilot.selfdrive.ui.ui_state import ChestnutState, ui_state
 from openpilot.selfdrive.ui.mici.onroad import SIDE_PANEL_WIDTH
 from openpilot.selfdrive.ui.mici.onroad.confidence_ball import ConfidenceBall
 from openpilot.selfdrive.ui.mici.onroad.hud_renderer import HudRenderer
@@ -136,7 +136,7 @@ def camera_transform(w: float, h: float) -> np.ndarray:
 
 class OnroadTestView(Widget):
   def __init__(self, route: str | None, frame_limit: int, shots_dir: str | None = None,
-               shot_every: int = 30, with_home_bar: bool = False):
+               shot_every: int = 30, with_home_bar: bool = False, chestnut: str = "active"):
     super().__init__()
     self._model = ModelRenderer()
     self._hud = HudRenderer()
@@ -148,6 +148,7 @@ class OnroadTestView(Widget):
     self._home = MiciHomeLayout() if with_home_bar else None
 
     self._t0 = time.monotonic()
+    self._chestnut = ChestnutState[chestnut.upper()]
     self._shots_dir = shots_dir
     self._shot_every = max(1, shot_every)
     self._frames = 0
@@ -214,6 +215,7 @@ class OnroadTestView(Widget):
       "extrinsicsCalibration": NS(height=[1.22]),
       "longitudinalPlan": NS(longitudinalPlanSource=log.LongitudinalPlan.LongitudinalPlanSource.cruise),
       "deviceState": NS(chestnutPresent=True, networkType=0, networkStrength=NS(raw=4), networkMetered=False),
+      "gpsLocationExternal": NS(hasFix=True, speed=15.0, bearingDeg=(t * 12.0) % 360.0),
       "liveTorqueParameters": NS(latAccelFactorFiltered=1.0, latAccelOffsetFiltered=0.0,
                                  frictionCoefficientFiltered=0.1),
     }
@@ -235,6 +237,7 @@ class OnroadTestView(Widget):
                                  curvature=0.0, desiredCurvature=0.0)
     msgs.setdefault("carControl", NS(latActive=True))
     msgs.setdefault("vehicleParameters", NS(roll=0.0))
+    msgs.setdefault("gpsLocationExternal", NS(hasFix=True, speed=15.0, bearingDeg=45.0))
     msgs.setdefault("carOutput", NS(actuatorsOutput=NS(torque=0.0)))
     msgs.setdefault("longitudinalPlan", NS(longitudinalPlanSource=log.LongitudinalPlan.LongitudinalPlanSource.cruise))
 
@@ -265,7 +268,7 @@ class OnroadTestView(Widget):
     ui_state.usb_unknown = False
     ui_state.chestnut_compiled = True
     ui_state.chestnut_present = True
-    ui_state.chestnut_state = 1  # READY
+    ui_state.chestnut_state = self._chestnut
     ui_state.is_body = True
     ui_state.recording_audio = True
     ui_state._started_frame = 0
@@ -316,6 +319,9 @@ def main():
   ap.add_argument("--shot-every", type=int, default=30, help="save every Nth frame (default 30)")
   ap.add_argument("--width", type=int, default=0, help="override window width (default: mici 536)")
   ap.add_argument("--height", type=int, default=0, help="override window height (default: mici 240)")
+  ap.add_argument("--chestnut", default="active",
+                  choices=[s.name.lower() for s in ChestnutState],
+                  help="chestnut (GPU) icon state to show (default active = green)")
   ap.add_argument("--with-home-bar", action="store_true",
                   help="also draw the home status bar (usb/chestnut/body/mic); not part of the driving view")
   args = ap.parse_args()
@@ -323,7 +329,7 @@ def main():
   open_window(args.width, args.height)
   route = os.path.join(START_CWD, args.route) if args.route and not os.path.isabs(args.route) else args.route
   shots = os.path.join(START_CWD, args.shots) if args.shots and not os.path.isabs(args.shots) else args.shots
-  view = OnroadTestView(route, args.frames, shots, args.shot_every, args.with_home_bar)
+  view = OnroadTestView(route, args.frames, shots, args.shot_every, args.with_home_bar, args.chestnut)
   gui_app.push_widget(view)
 
   start = time.monotonic()
