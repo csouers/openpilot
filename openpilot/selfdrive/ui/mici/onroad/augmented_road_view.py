@@ -258,19 +258,21 @@ class AugmentedRoadView(CameraView):
       int(self._content_rect.height)
     )
 
-    # Render the UI on black instead of the camera feed, but keep the stream
-    # machinery alive so the wide/narrow speed gate still drives the model
-    # path projection (super()._render is what normally runs this).
-    # super()._render(self._content_rect)
-    rl.draw_rectangle_rec(self._content_rect, rl.BLACK)
-    if self._ensure_connection():
-      if self._switching:
-        self._handle_switch()
-      buffer = self.client.recv(timeout_ms=0)
-      if buffer:
-        self.frame = buffer
-        self._texture_needs_update = True
-    self._calc_frame_matrix(self._content_rect)
+    if ui_state.road_camera_view:
+      # Draw the road camera feed (also updates the frame the model projection uses)
+      super()._render(self._content_rect)
+    else:
+      # Render the UI on black instead of the camera feed, but keep the stream
+      # machinery alive so the wide/narrow speed gate still drives the model
+      # path projection (super()._render is what normally runs this).
+      rl.draw_rectangle_rec(self._content_rect, rl.BLACK)
+      if self._ensure_connection():
+        if self._switching:
+          self._handle_switch()
+        buffer = self.client.recv(timeout_ms=0)
+        if buffer:
+          self.frame = buffer
+      self._calc_frame_matrix(self._content_rect)
 
     # Draw all UI overlays
     self._model_renderer.render(self._content_rect)
