@@ -91,7 +91,7 @@ def hysteresis(x: float, state: bool, on: float, off: float) -> bool:
 
 class ModelRenderer(BaseModelRenderer):
   LANE_LINE_WIDTHS = (0.12, 0.16, 0.16, 0.16)
-  ROAD_EDGE_WIDTH = 0.16
+  ROAD_EDGE_WIDTH = 0.08  # fork: thin red edges; keep upstream projection
 
   def __init__(self):
     super().__init__()

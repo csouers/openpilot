@@ -24,9 +24,9 @@ def test_no_fork_steering_path_overlay():
   assert "_draw_steer_path" not in inspect.getsource(ModelRenderer._render)
 
 
-def test_upstream_road_widths():
+def test_upstream_lane_widths_and_thin_fork_edges():
   assert ModelRenderer.LANE_LINE_WIDTHS == (0.12, 0.16, 0.16, 0.16)
-  assert ModelRenderer.ROAD_EDGE_WIDTH == 0.16
+  assert ModelRenderer.ROAD_EDGE_WIDTH == 0.08
 
 
 @pytest.mark.parametrize("lane_probability", [0.0, 1.0])

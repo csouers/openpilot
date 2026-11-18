@@ -7,7 +7,7 @@
 - Replacement merge: `8f7c829dd`, parents `d67bd687f` and `b1a662033` (same as the original merge).
 - No push, deployment, reset, or rewrite of `hondabody_c4`.
 - This is a fresh Git merge followed by reuse of reviewed original resolutions and selective repair patches, NOT an independent rewrite of every resolution. Inner submodule merges are reused, not redone.
-- Operator direction: lane lines, road edges, and path drawing must follow upstream. Ghost/solid lead cars and other fork UI behavior remain separate. Subsequent explicit direction restores fixed-red road-edge colors `(255, 0, 21)` only; upstream geometry, widths, confidence opacity, lane/path drawing and disengagement fade remain.
+- Operator direction: lane lines, road edges, and path drawing must follow upstream. Ghost/solid lead cars and other fork UI behavior remain separate. Subsequent explicit directions restore fixed-red road-edge colors `(255, 0, 21)` and the fork's thin `0.08` edge width (instead of upstream `0.16`); upstream projection, lane widths, confidence opacity, lane/path drawing and disengagement fade remain.
 
 ## Behavior audit
 
