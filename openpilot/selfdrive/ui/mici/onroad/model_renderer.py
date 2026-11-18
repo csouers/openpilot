@@ -192,7 +192,8 @@ class ModelRenderer(BaseModelRenderer):
     if self._visible > 1e-2:
       self._draw_lane_lines()
       self._draw_path()
-      self._draw_steer_path()
+      # the steering-angle path is hidden for now: it is a debug overlay, not something to show driving
+      # self._draw_steer_path()
 
     if render_lead_indicator:
       self._update_lead_bars(sm)
