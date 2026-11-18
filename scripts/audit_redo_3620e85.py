@@ -67,13 +67,16 @@ def main():
 
   assert source("HEAD", BASE_RENDERER) == source(UPSTREAM, BASE_RENDERER)
   current, upstream = methods(source("HEAD", RENDERER)), methods(source(UPSTREAM, RENDERER))
-  for name in ("_draw_offset", "_get_ll_color", "_draw_lane_lines", "_draw_path"):
+  for name in ("_draw_offset", "_get_ll_color", "_draw_path"):
     assert dump(current[name]) == dump(upstream[name]), name
   for name in ("_update_model", "_update_path_gradient", "_get_path_length_idx",
                "_map_line_to_polygon", "_hsla_to_color", "_draw_steer_path"):
     assert name not in current, name
   assert visibility_block(current["_render"]) == visibility_block(upstream["_render"])
-  print("PASS: upstream base renderer, mici road draw/color methods and disengagement visibility")
+  current_lanes = next(n for n in current["_draw_lane_lines"].body if isinstance(n, ast.For))
+  upstream_lanes = next(n for n in upstream["_draw_lane_lines"].body if isinstance(n, ast.For))
+  assert dump(current_lanes) == dump(upstream_lanes)
+  print("PASS: upstream geometry, lane/path drawing and visibility; intentional fixed-red edge colors")
 
   for path, expected in (("panda", "d68f2ec7346851e16574cd598aaf931e03c8764e"),
                          ("opendbc_repo", "7c68585ed36b1ce5535a411110d7b9c6ce803f1f")):

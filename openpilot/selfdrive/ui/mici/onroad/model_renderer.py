@@ -16,6 +16,7 @@ LEAD_BAR_LENGTH = 24.0  # px
 LEAD_BAR_WIDTH = 5.4  # m (3x the original 1.8, spans the lane behind the target)
 LEAD_CAR_WIDTH = 2.8  # m, width of the on-road lead car icon (incl. mirrors)
 LEAD_MIN_ICON_WIDTH = 8.7  # px floor so a distant lead still reads as a car (6.0 +45%)
+ROAD_EDGE_COLOR = rl.Color(255, 0, 21, 255)  # fixed red; geometry remains upstream
 STOP_SPEED = 1.0  # m/s, planned speed that counts as stopping
 STOP_APPEAR_DISTANCE = (8.0, 50.0)  # m
 STOP_LEAD_MARGIN = 15.0  # m, a lead this close past the stop is what it's stopping for
@@ -268,7 +269,7 @@ class ModelRenderer(BaseModelRenderer):
     return color
 
   def _draw_lane_lines(self):
-    """Draw lane lines and road edges. Two closest lines should be green (lane line or road edges)."""
+    """Draw upstream lane lines and fixed-red road edges."""
     offset = self._draw_offset()
 
     for i, lane_line in enumerate(self._lane_lines):
@@ -282,8 +283,8 @@ class ModelRenderer(BaseModelRenderer):
       if road_edge.projected_points.size == 0:
         continue
 
-      # if closest lane lines are not confident, make road edges green
-      color = self._get_ll_color(float(1.0 - self._road_edge_stds[i]), float(self._lane_line_probs[i + 1]) < 0.25, i == 0)
+      alpha = np.clip(1.0 - self._road_edge_stds[i], 0.0, 0.7) * self._visible
+      color = rl.Color(ROAD_EDGE_COLOR.r, ROAD_EDGE_COLOR.g, ROAD_EDGE_COLOR.b, int(alpha * 255))
       draw_polygon(self._rect, road_edge.projected_points + offset, color)
 
   def _draw_path(self):

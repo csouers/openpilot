@@ -7,7 +7,7 @@
 - Replacement merge: `8f7c829dd`, parents `d67bd687f` and `b1a662033` (same as the original merge).
 - No push, deployment, reset, or rewrite of `hondabody_c4`.
 - This is a fresh Git merge followed by reuse of reviewed original resolutions and selective repair patches, NOT an independent rewrite of every resolution. Inner submodule merges are reused, not redone.
-- Operator direction: lane lines, road edges, and path drawing must follow upstream. Ghost/solid lead cars and other fork UI behavior remain separate.
+- Operator direction: lane lines, road edges, and path drawing must follow upstream. Ghost/solid lead cars and other fork UI behavior remain separate. Subsequent explicit direction restores fixed-red road-edge colors `(255, 0, 21)` only; upstream geometry, widths, confidence opacity, lane/path drawing and disengagement fade remain.
 
 ## Behavior audit
 
@@ -36,7 +36,7 @@ The pre-merge fork changes 88 paths from the merge base. Of these, 69 do not ove
 
 The original fork copied base projection/gradient methods into its mici subclass and added narrower red road edges and a steering-angle overlay. Later repairs added camera-height projection offsets and forced road graphics visible while disengaged. Those fork changes are intentionally absent here.
 
-The base renderer is byte-identical to `b1a662033`. Mici `_draw_offset`, `_get_ll_color`, `_draw_lane_lines`, and `_draw_path` have identical ASTs to that upstream commit. The road visibility assignment/conditional also matches upstream. Geometry methods are inherited, with regression tests preventing fork overrides from quietly returning.
+The base renderer is byte-identical to `b1a662033`. Mici `_draw_offset`, `_get_ll_color`, and `_draw_path`, plus the lane-line loop of `_draw_lane_lines`, have identical ASTs to that upstream commit. The road-edge loop intentionally uses fixed red per subsequent operator direction. The road visibility assignment/conditional also matches upstream. Geometry methods are inherited, with regression tests preventing fork overrides from quietly returning.
 
 ## Disposition of every post-merge commit
 
@@ -78,7 +78,7 @@ Every other tracked file and every submodule pointer matches the recovered origi
 
 ## Validation
 
-- 41 passed: lead regression tests, upstream geometry contracts, Honda illumination tests, and 23 longitudinal maneuver tests.
+- Initial reconstruction: 41 passed. Fixed-red follow-up: 43 passed, adding low/high lane-confidence edge-color regressions. Includes lead regression tests, upstream geometry contracts, Honda illumination tests, and 23 longitudinal maneuver tests.
 - All Python paths added/modified by the replacement merge pass ruff; final changed-source compilation and whitespace checks run separately.
 - Safety suites `test_honda.py`, `test_elm327.py`, `test_body.py`: **272 passed, 9 failed, 262 skipped, 108 subtests passed** on BOTH original and rebuilt checkout environments. JUnit comparison confirms identical failure identities: eight Bosch forwarding tests and one Bosch-long relay-malfunction test. These are baseline failures, not a clean safety pass. Generic `test_body.py` is comma-body coverage, not dedicated coverage for the fork's Honda-body modes.
 - Both checkouts use the same unchanged opendbc sources and compiled safety library. This is regression comparison, not a fresh firmware build or independent revalidation of the inner safety merge.
