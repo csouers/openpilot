@@ -134,6 +134,11 @@ class ModelRenderer(BaseModelRenderer):
     self._stop_point = StopPoint()
     self._torque_filter = FirstOrderFilter(0, 0.1, 1 / gui_app.target_fps)
     self._visible = 0.0
+    self._alert_present = False
+
+  def set_alert_present(self, alert_present: bool):
+    """An alert banner draws over the road: step the model layer aside while it is up."""
+    self._alert_present = alert_present
 
   def _draw_offset(self) -> np.ndarray:
     # car space transform maps to rect-origin space
@@ -181,8 +186,9 @@ class ModelRenderer(BaseModelRenderer):
       self._update_model(lead_one, path_x_array)
       self._transform_dirty = False
 
-    # lane lines and path fade out while disengaged
-    self._visible = 1 - status_fade.weight(UIStatus.DISENGAGED)
+    # fork: lane lines, road edges and the path are always drawn, engaged or not. Only an alert
+    # banner taking over the screen hides them (set_alert_present below).
+    self._visible = 0.0 if self._alert_present else 1.0
     if self._visible > 1e-2:
       self._draw_lane_lines()
       self._draw_path()

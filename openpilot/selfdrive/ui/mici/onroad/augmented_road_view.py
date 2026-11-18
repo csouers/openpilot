@@ -279,6 +279,7 @@ class AugmentedRoadView(CameraView):
     # rl.draw_texture_ex(self._fade_texture, rl.Vector2(self._content_rect.x, self._content_rect.y), 0.0, 1.0, rl.WHITE)
 
     self._hud_renderer.set_can_draw_top_icons(alert_to_render is None)
+    self._model_renderer.set_alert_present(alert_to_render is not None)
     # critical alerts show a warning icon where the torque bar is
     self._hud_renderer.set_torque_bar_hidden(alert_to_render is not None and alert_to_render.status == log.SelfdriveState.AlertStatus.critical)
     self._hud_renderer.set_wheel_critical_icon(alert_to_render is not None and not not_animating_out and
