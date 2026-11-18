@@ -68,7 +68,8 @@ RATES["carParams"] = 1.0
 
 
 class Sender:
-  def __init__(self, lead_style: str, planned_stop: bool):
+  def __init__(self, lead_style: str, planned_stop: bool, engaged: bool = True):
+    self.engaged = engaged
     self.lead_style = lead_style
     self.planned_stop = planned_stop
     self.t0 = time.monotonic()
@@ -190,10 +191,11 @@ class Sender:
 
     if svc == "selfdriveState":
       msg = messaging.new_message("selfdriveState")
-      msg.selfdriveState.enabled = True
-      msg.selfdriveState.active = True
+      msg.selfdriveState.enabled = self.engaged
+      msg.selfdriveState.active = self.engaged
       msg.selfdriveState.experimentalMode = True  # drives the e2e icon in the status rail
-      msg.selfdriveState.state = log.SelfdriveState.OpenpilotState.enabled
+      msg.selfdriveState.state = (log.SelfdriveState.OpenpilotState.enabled if self.engaged
+                                  else log.SelfdriveState.OpenpilotState.disabled)
       msg.selfdriveState.engageable = True
       msg.selfdriveState.alertSize = log.SelfdriveState.AlertSize.none
       msg.selfdriveState.alertStatus = log.SelfdriveState.AlertStatus.normal
@@ -300,9 +302,10 @@ def main():
   ap.add_argument("--lead-style", default="toggle", choices=["auto", "solid", "ghost", "toggle", "stop"])
   ap.add_argument("--planned-stop", dest="planned_stop", action="store_true", default=True)
   ap.add_argument("--no-planned-stop", dest="planned_stop", action="store_false")
+  ap.add_argument("--disengaged", action="store_true", help="send selfdriveState disabled (not engaged)")
   ap.add_argument("--hz", type=int, default=100, help="loop rate (default 100; services keep their own)")
   args = ap.parse_args()
-  Sender(args.lead_style, args.planned_stop).run(args.hz)
+  Sender(args.lead_style, args.planned_stop, not args.disengaged).run(args.hz)
 
 
 if __name__ == "__main__":
