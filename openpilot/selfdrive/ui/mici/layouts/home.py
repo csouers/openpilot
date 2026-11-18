@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import math
 
 from openpilot.cereal import log
@@ -16,6 +17,13 @@ from openpilot.common.version import RELEASE_BRANCHES
 HEAD_BUTTON_FONT_SIZE = 40
 HOME_PADDING = 8
 ALERTS_ZONE_WIDTH = 180
+
+# wake animation: (start, duration, slide distance) in seconds and px
+WAKE_TITLE = (0.0, 0.8, 44)
+WAKE_VERSION = (0.2, 0.8, 22)
+WAKE_ICONS_START = 0.7
+WAKE_ICON_STAGGER = 0.1
+WAKE_ICON_DURATION = 0.5
 
 NetworkType = log.DeviceState.NetworkType
 
@@ -148,7 +156,28 @@ class MiciHomeLayout(Widget):
     ], spacing=18)
 
     self._openpilot_label = UnifiedLabel("openpilot", font_size=96, font_weight=FontWeight.DISPLAY, max_width=480, wrap_text=False)
+    self._version_label = UnifiedLabel("", font_size=36, font_weight=FontWeight.ROMAN, max_width=480, wrap_text=False)
+    self._large_version_label = UnifiedLabel("", font_size=64, text_color=rl.GRAY, font_weight=FontWeight.ROMAN, max_width=480, wrap_text=False)
+    self._date_label = UnifiedLabel("", font_size=36, text_color=rl.GRAY, font_weight=FontWeight.ROMAN, max_width=480, wrap_text=False)
+    self._branch_label = UnifiedLabel("", font_size=36, text_color=rl.GRAY, font_weight=FontWeight.ROMAN, scroll=True)
     self._version_commit_label = UnifiedLabel("", font_size=42, text_color=rl.GRAY, font_weight=FontWeight.ROMAN, max_width=480, wrap_text=False)
+
+    self._wake_pending = True  # greet on boot
+    self._wake_start: float | None = None
+
+  def play_wake_animation(self):
+    self._wake_pending = True
+
+  def _wake_progress(self, start: float, duration: float) -> float:
+    if self._wake_start is None:
+      return 1.0
+    return min(max((rl.get_time() - self._wake_start - start) / duration, 0.0), 1.0)
+
+  @staticmethod
+  def _fade_in(rect: rl.Rectangle, progress: float):
+    # background is black, so fading in is drawing black over it
+    if progress < 1.0:
+      rl.draw_rectangle_rec(rect, rl.Color(0, 0, 0, int(255 * (1.0 - progress))))
 
   def set_callbacks(self, on_settings: Callable | None = None, on_alerts: Callable | None = None,
                     alert_count_callback: Callable[[], int] | None = None,
@@ -167,7 +196,7 @@ class MiciHomeLayout(Widget):
     elif self._on_settings_click:
       self._on_settings_click()
 
-  def _get_version_text(self) -> tuple[str, str, str] | None:
+  def _get_version_text(self) -> tuple[str, str, str, str] | None:
     version = ui_state.params.get("Version")
     branch = ui_state.params.get("GitBranch")
     commit = ui_state.params.get("GitCommit")
@@ -175,32 +204,52 @@ class MiciHomeLayout(Widget):
     if not all((version, branch, commit)):
       return None
 
-    return version, branch, commit[:7]
+    commit_date_raw = ui_state.params.get("GitCommitDate")
+    try:
+      # GitCommitDate format from get_commit_date(): '%ct %ci' e.g. "'1708012345 2024-02-15 ...'"
+      unix_ts = int(commit_date_raw.strip("'").split()[0])
+      date_str = datetime.datetime.fromtimestamp(unix_ts).strftime("%b %d")
+    except (ValueError, IndexError, TypeError, AttributeError):
+      date_str = ""
+
+    return version, branch, commit[:7], date_str
 
   def _render(self, _):
+    # start once home is actually on screen, e.g. after swiping past boot alerts
+    if self._wake_pending and abs(self.rect.x) < self.rect.width / 2:
+      self._wake_pending = False
+      self._wake_start = rl.get_time()
+
     # TODO: why is there extra space here to get it to be flush?
     text_pos = rl.Vector2(self.rect.x - 2 + HOME_PADDING, self.rect.y - 16)
-    self._openpilot_label.set_position(text_pos.x, text_pos.y)
+    title_progress = self._wake_progress(*WAKE_TITLE[:2])
+    title_y = text_pos.y + WAKE_TITLE[2] * (1.0 - title_progress) ** 3
+    self._openpilot_label.set_position(text_pos.x, title_y)
     self._openpilot_label.render()
+    self._fade_in(rl.Rectangle(self.rect.x, title_y, self.rect.width, self._openpilot_label.font_size + 16), title_progress)
 
-    if self._version_text is not None:
-      version_pos = rl.Rectangle(text_pos.x, text_pos.y + self._openpilot_label.font_size + 16, 100, 44)
-      if self._version_text[1] not in RELEASE_BRANCHES:
-        self._version_commit_label.set_text(self._version_text[2])
-        self._version_commit_label.set_position(version_pos.x, version_pos.y)
-        self._version_commit_label.render()
+    # fork look: just the commit hash under the title, big - no version/date/branch row. It still
+    # takes part in the wake animation by sliding and fading on the version timing.
+    if self._version_text is not None and self._version_text[1] not in RELEASE_BRANCHES:
+      version_progress = self._wake_progress(*WAKE_VERSION[:2])
+      version_y = text_pos.y + self._openpilot_label.font_size + 16 + WAKE_VERSION[2] * (1.0 - version_progress) ** 3
+      self._version_commit_label.set_text(self._version_text[2])
+      self._version_commit_label.set_position(text_pos.x, version_y)
+      self._version_commit_label.render()
+      self._fade_in(rl.Rectangle(self.rect.x, version_y, self.rect.width, self._version_commit_label.font_size + 7), version_progress)
 
     # ***** Center-aligned bottom section icons *****
     usb_connected = ui_state.usb_connected
     usb_unknown = ui_state.usb_unknown
     chestnut_state = ui_state.chestnut_state
-    self._usb_icon.set_visible(usb_connected and usb_unknown)
+    chestnut_failed = chestnut_state in (ChestnutState.UNCOMPILED, ChestnutState.FAILED)
+    self._usb_icon.set_visible(usb_connected and usb_unknown and not chestnut_failed)
     self._chestnut_icon.set_visible(not usb_unknown and chestnut_state not in
                                     (ChestnutState.LOADING, ChestnutState.UNCOMPILED, ChestnutState.FAILED) and
                                     (usb_connected or chestnut_state in (ChestnutState.READY, ChestnutState.ACTIVE)))
     self._chestnut_loading_icon.set_visible(not usb_unknown and chestnut_state == ChestnutState.LOADING)
     self._chestnut_loading_icon.set_opacity(0.35 + 0.65 * (0.5 - 0.5 * math.cos(rl.get_time() * 6.0)))
-    self._chestnut_failed_icon.set_visible(not usb_unknown and chestnut_state in (ChestnutState.UNCOMPILED, ChestnutState.FAILED))
+    self._chestnut_failed_icon.set_visible(chestnut_failed)
     self._mic_icon.set_visible(ui_state.recording_audio)
     self._body_icon.set_visible(bool(ui_state.is_body))
 
@@ -211,3 +260,11 @@ class MiciHomeLayout(Widget):
     self._alerts_pill.set_position(self.rect.x + self.rect.width - self._alerts_pill.rect.width - HOME_PADDING,
                                    self.rect.y + self.rect.height - self._alerts_pill.rect.height)
     self._alerts_pill.render()
+
+    # status icons fade in one after another, alerts pill last
+    if self._wake_start is not None:
+      icons = [w.rect for w in self._status_bar_layout.widgets if w.is_visible] + [self._alerts_pill.rect]
+      for i, rect in enumerate(icons):
+        self._fade_in(rect, self._wake_progress(WAKE_ICONS_START + i * WAKE_ICON_STAGGER, WAKE_ICON_DURATION))
+      if self._wake_progress(WAKE_ICONS_START + len(icons) * WAKE_ICON_STAGGER, WAKE_ICON_DURATION) >= 1.0:
+        self._wake_start = None
