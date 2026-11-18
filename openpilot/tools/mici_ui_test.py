@@ -41,7 +41,7 @@ from openpilot.system.ui.widgets import Widget
 import raylib_nb as rl
 
 from cereal import log
-from openpilot.selfdrive.ui.ui_state import ChestnutState, ui_state
+from openpilot.selfdrive.ui.ui_state import ChestnutState, UIStatus, ui_state
 from openpilot.selfdrive.ui.mici.onroad import SIDE_PANEL_WIDTH
 from openpilot.selfdrive.ui.mici.onroad.confidence_ball import ConfidenceBall
 from openpilot.selfdrive.ui.mici.onroad.hud_renderer import HudRenderer
@@ -135,25 +135,47 @@ def camera_transform(w: float, h: float) -> np.ndarray:
 
 
 class TestModelRenderer(ModelRenderer):
-  """Optionally forces one lead-car look, so ghost and solid can be A/B'd at the same distance."""
+  """Controls the lead-car look for testing.
 
-  def __init__(self, lead_style: str = "auto"):
+  auto    radar-confirmed leads solid, vision-only leads as the dashed ghost
+  solid   every lead solid
+  ghost   every lead ghost
+  stop    no car icons, only upstream's planned-stop bar
+  toggle  one lead, cycling solid -> ghost -> planned-stop bar once a second
+  """
+
+  def __init__(self, lead_style: str = "auto", single_lead: bool = False):
     super().__init__()
     self._lead_style = lead_style
+    self._single_lead = single_lead or lead_style == "toggle"
 
   def _draw_lead_indicator(self):
-    if self._lead_style != "auto":
+    if self._single_lead and len(self._lead_vehicles) > 1:
+      self._lead_vehicles[1].icon_width = 0.0
+
+    if self._lead_style == "stop":
+      # upstream's planned-stop bar only: no car icons at all
+      for lv in self._lead_vehicles:
+        lv.icon_width = 0.0
+    elif self._lead_style == "toggle":
+      phase = int(rl.get_time()) % 3  # solid -> ghost -> planned-stop bar
+      for lv in self._lead_vehicles:
+        lv.radar = phase == 0
+        if phase == 2:
+          lv.icon_width = 0.0
+    elif self._lead_style != "auto":
       for lv in self._lead_vehicles:
         lv.radar = self._lead_style == "solid"
+
     super()._draw_lead_indicator()
 
 
 class OnroadTestView(Widget):
   def __init__(self, route: str | None, frame_limit: int, shots_dir: str | None = None,
                shot_every: int = 30, with_home_bar: bool = False, chestnut: str = "active",
-               lead_style: str = "auto"):
+               lead_style: str = "auto", single_lead: bool = False, draw_ball: bool = False):
     super().__init__()
-    self._model = TestModelRenderer(lead_style)
+    self._model = TestModelRenderer(lead_style, single_lead)
     self._hud = HudRenderer()
     self._ball = ConfidenceBall()
     self._icons = StatusIconColumn()
@@ -163,7 +185,9 @@ class OnroadTestView(Widget):
     self._home = MiciHomeLayout() if with_home_bar else None
 
     self._t0 = time.monotonic()
+    self._lead_style = lead_style
     self._chestnut = ChestnutState[chestnut.upper()]
+    self._draw_ball = draw_ball
     self._shots_dir = shots_dir
     self._shot_every = max(1, shot_every)
     self._frames = 0
@@ -188,6 +212,25 @@ class OnroadTestView(Widget):
           yield dict(latest)
         if frame_limit and n > frame_limit:
           return
+
+  @staticmethod
+  def _without_leads(msgs):
+    """Planned-stop bar is suppressed while a lead is ahead of it, so drop the leads."""
+    none = NS(present=False, radar=False, dRel=0.0, yRel=0.0, vRel=0.0)
+    msgs["radarState"] = NS(leadOne=none, leadTwo=none)
+    return msgs
+
+  @staticmethod
+  def _with_planned_stop(model):
+    """Overwrite the model's speed/position profile so StopPoint finds a stop ahead."""
+    xs = np.array(model.position.x, dtype=np.float32)
+    if xs.size == 0:
+      return model
+    stop_at = 24.0  # m ahead, inside STOP_APPEAR_DISTANCE and low enough to read against the road
+    vx = np.clip((stop_at - xs) / stop_at, 0.0, 1.0) * 15.0
+    vx[xs >= stop_at] = 0.0
+    model.velocity = _polyline([(float(v), 0.0, 0.0) for v in vx])
+    return model
 
   def _synthetic(self, t: float):
     xs = np.linspace(2.0, 120.0, 24)
@@ -266,15 +309,22 @@ class OnroadTestView(Widget):
         msgs = None
       if msgs is not None:
         self._force_all_indicators(msgs)
+        if self._lead_style in ("stop", "toggle"):
+          msgs["modelV2"] = self._with_planned_stop(msgs["modelV2"])
         self._last_sm = FakeSubMaster(msgs)
     else:
-      self._last_sm = FakeSubMaster(self._synthetic(t))
+      msgs = self._synthetic(t)
+      if self._lead_style in ("stop", "toggle"):
+        msgs["modelV2"] = self._with_planned_stop(msgs["modelV2"])
+        if self._lead_style == "stop" or int(rl.get_time()) % 3 == 2:
+          self._without_leads(msgs)
+      self._last_sm = FakeSubMaster(msgs)
 
     self._frames += 1
     sm = self._last_sm
     ui_state.sm = sm
     ui_state.started = True
-    ui_state.status = 2  # ENGAGED
+    ui_state.status = UIStatus.ENGAGED
     ui_state.is_metric = False
     ui_state.always_on_dm = False
     ui_state.navigation_enabled = False
@@ -303,7 +353,9 @@ class OnroadTestView(Widget):
 
     self._model.render(rl.Rectangle(0, 0, w, h))
     self._hud.render(rl.Rectangle(0, 0, w, h))
-    self._ball.render(rl.Rectangle(0, 0, w, h))
+    if self._draw_ball:
+      # the fork replaced the ball with the status icon rail; opt in only to compare
+      self._ball.render(rl.Rectangle(0, 0, w, h))
     self._icons.render(rl.Rectangle(w - SIDE_PANEL_WIDTH, 0, SIDE_PANEL_WIDTH, h))
     self._turn_signals.render(rl.Rectangle(0, 0, w, h))
 
@@ -334,8 +386,11 @@ def main():
   ap.add_argument("--shot-every", type=int, default=30, help="save every Nth frame (default 30)")
   ap.add_argument("--width", type=int, default=0, help="override window width (default: mici 536)")
   ap.add_argument("--height", type=int, default=0, help="override window height (default: mici 240)")
-  ap.add_argument("--lead-style", default="auto", choices=["auto", "solid", "ghost"],
+  ap.add_argument("--lead-style", default="auto", choices=["auto", "solid", "ghost", "stop", "toggle"],
                   help="force every lead car to one look (default auto: radar=solid, vision=ghost)")
+  ap.add_argument("--single-lead", action="store_true", help="draw only the nearest lead")
+  ap.add_argument("--ball", action="store_true",
+                  help="also draw the confidence ball (the fork does not: the status icon rail replaced it)")
   ap.add_argument("--chestnut", default="active",
                   choices=[s.name.lower() for s in ChestnutState],
                   help="chestnut (GPU) icon state to show (default active = green)")
@@ -347,7 +402,7 @@ def main():
   route = os.path.join(START_CWD, args.route) if args.route and not os.path.isabs(args.route) else args.route
   shots = os.path.join(START_CWD, args.shots) if args.shots and not os.path.isabs(args.shots) else args.shots
   view = OnroadTestView(route, args.frames, shots, args.shot_every, args.with_home_bar, args.chestnut,
-                        args.lead_style)
+                        args.lead_style, args.single_lead, args.ball)
   gui_app.push_widget(view)
 
   start = time.monotonic()
