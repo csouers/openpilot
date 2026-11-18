@@ -16,6 +16,7 @@ from openpilot.system.ui.widgets.label import UnifiedLabel
 AlertStatus = log.SelfdriveState.AlertStatus
 
 ALERT_MARGIN = 20
+ALERT_TEXT_INSET = 4  # fork: only a few pixels between the screen edge and the first glyph
 ALERT_TITLE_LETTER_SPACING = -0.02
 ALERT_TITLE_MIN_FONT = 64
 
@@ -145,14 +146,15 @@ class AlertRenderer(Widget):
       txt_icon = None
 
     # create text rect based on icon presence
-    text_x = self._rect.x + ALERT_MARGIN
-    text_width = self._rect.width - 2 * ALERT_MARGIN
+    # fork: alert text hugs the left edge instead of being inset by ALERT_MARGIN
+    text_x = self._rect.x + ALERT_TEXT_INSET
+    text_width = self._rect.width - ALERT_TEXT_INSET - ALERT_MARGIN
     if icon_side is not None and txt_icon is not None:
       if icon_side == 'left':
         text_x = self._rect.x + self._txt_turn_signal_right.width
         text_width = self._rect.width - ALERT_MARGIN - self._txt_turn_signal_right.width
       elif icon_side == 'right':
-        text_x = self._rect.x + ALERT_MARGIN
+        text_x = self._rect.x + ALERT_TEXT_INSET
         text_width = self._rect.width - ALERT_MARGIN - self._txt_turn_signal_right.width
 
     text_rect = rl.Rectangle(
