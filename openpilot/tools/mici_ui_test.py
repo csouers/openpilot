@@ -134,11 +134,26 @@ def camera_transform(w: float, h: float) -> np.ndarray:
   return K @ R
 
 
+class TestModelRenderer(ModelRenderer):
+  """Optionally forces one lead-car look, so ghost and solid can be A/B'd at the same distance."""
+
+  def __init__(self, lead_style: str = "auto"):
+    super().__init__()
+    self._lead_style = lead_style
+
+  def _draw_lead_indicator(self):
+    if self._lead_style != "auto":
+      for lv in self._lead_vehicles:
+        lv.radar = self._lead_style == "solid"
+    super()._draw_lead_indicator()
+
+
 class OnroadTestView(Widget):
   def __init__(self, route: str | None, frame_limit: int, shots_dir: str | None = None,
-               shot_every: int = 30, with_home_bar: bool = False, chestnut: str = "active"):
+               shot_every: int = 30, with_home_bar: bool = False, chestnut: str = "active",
+               lead_style: str = "auto"):
     super().__init__()
-    self._model = ModelRenderer()
+    self._model = TestModelRenderer(lead_style)
     self._hud = HudRenderer()
     self._ball = ConfidenceBall()
     self._icons = StatusIconColumn()
@@ -319,6 +334,8 @@ def main():
   ap.add_argument("--shot-every", type=int, default=30, help="save every Nth frame (default 30)")
   ap.add_argument("--width", type=int, default=0, help="override window width (default: mici 536)")
   ap.add_argument("--height", type=int, default=0, help="override window height (default: mici 240)")
+  ap.add_argument("--lead-style", default="auto", choices=["auto", "solid", "ghost"],
+                  help="force every lead car to one look (default auto: radar=solid, vision=ghost)")
   ap.add_argument("--chestnut", default="active",
                   choices=[s.name.lower() for s in ChestnutState],
                   help="chestnut (GPU) icon state to show (default active = green)")
@@ -329,7 +346,8 @@ def main():
   open_window(args.width, args.height)
   route = os.path.join(START_CWD, args.route) if args.route and not os.path.isabs(args.route) else args.route
   shots = os.path.join(START_CWD, args.shots) if args.shots and not os.path.isabs(args.shots) else args.shots
-  view = OnroadTestView(route, args.frames, shots, args.shot_every, args.with_home_bar, args.chestnut)
+  view = OnroadTestView(route, args.frames, shots, args.shot_every, args.with_home_bar, args.chestnut,
+                        args.lead_style)
   gui_app.push_widget(view)
 
   start = time.monotonic()
