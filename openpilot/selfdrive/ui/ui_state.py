@@ -253,7 +253,7 @@ class UIState:
     # chestnut, so there is nothing to arbitrate here
     status = jetlink_adapter.status()
     if status is not None and status.shown:
-      model_seen = self.sm.recv_frame["modelV2"] > self.started_frame
+      model_seen = self.received_since_started("modelV2")
       running_big = model_seen and self.sm.alive["modelV2"] and self.sm["modelV2"].big
       runtime = jetlink_adapter.hooks().runtime()
       self.chestnut_present = status.present or status.enabled
