@@ -225,7 +225,8 @@ class AugmentedRoadView(CameraView):
     # Offroad shows the side panel in its disengaged state with text in the camera area
     if not ui_state.started:
       rl.draw_rectangle_rec(self.rect, rl.BLACK)
-      self._render_offroad_text(rl.Rectangle(self.rect.x + SIDE_PANEL_WIDTH, self.rect.y, self.rect.width - SIDE_PANEL_WIDTH, self.rect.height))
+      # fork: no reserved side panel while offroad either
+      self._render_offroad_text(self.rect)
       self._hud_renderer.set_wheel_critical_icon(False)
       self._render_left_panel(False)
       return
@@ -238,10 +239,11 @@ class AugmentedRoadView(CameraView):
     alert_to_render, not_animating_out = self._alert_renderer.will_render()
     show_navigation = ui_state.navigation_enabled and ui_state.nav_destination_set and alert_to_render is None
 
-    # Create inner content area with border padding. Without navigation, the black side panel is on the left
-    side_panel = 0 if show_navigation else SIDE_PANEL_WIDTH
+    # Create inner content area with border padding. Upstream reserves a black side panel of
+    # SIDE_PANEL_WIDTH on the left for the DMoji/long-indicator/steering-wheel column, but this fork
+    # does not draw anything there, so the content (and the set speed) starts at the screen edge.
     self._content_rect = rl.Rectangle(
-      self.rect.x + side_panel,
+      self.rect.x,
       self.rect.y,
       self.rect.width - (PANEL_WIDTH if show_navigation else 0),
       self.rect.height,
