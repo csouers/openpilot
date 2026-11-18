@@ -7,6 +7,7 @@ from openpilot.system.ui.widgets import Widget
 ICON_W, ICON_H = 72, 66
 MARGIN = 16
 BOTTOM_LIFT = 25  # raise the arrows up off the bottom edge
+SIDE_INSET = 100  # fork: pull the arrows inwards, away from the screen edges
 
 
 class TurnSignals(Widget):
@@ -36,7 +37,7 @@ class TurnSignals(Widget):
 
   def _render(self, _):
     bottom_y = self._rect.y + self._rect.height - ICON_H - MARGIN - BOTTOM_LIFT
-    for texture, x, on in ((self._left, self._rect.x + MARGIN, self._left_on),
-                           (self._right, self._rect.x + self._rect.width - MARGIN - ICON_W, self._right_on)):
+    for texture, x, on in ((self._left, self._rect.x + MARGIN + SIDE_INSET, self._left_on),
+                           (self._right, self._rect.x + self._rect.width - MARGIN - ICON_W - SIDE_INSET, self._right_on)):
       if on:
         rl.draw_texture_ex(texture, rl.Vector2(x, bottom_y), 0.0, 1.0, rl.WHITE)
