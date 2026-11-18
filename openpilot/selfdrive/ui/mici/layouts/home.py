@@ -160,7 +160,7 @@ class MiciHomeLayout(Widget):
     self._large_version_label = UnifiedLabel("", font_size=64, text_color=rl.GRAY, font_weight=FontWeight.ROMAN, max_width=480, wrap_text=False)
     self._date_label = UnifiedLabel("", font_size=36, text_color=rl.GRAY, font_weight=FontWeight.ROMAN, max_width=480, wrap_text=False)
     self._branch_label = UnifiedLabel("", font_size=36, text_color=rl.GRAY, font_weight=FontWeight.ROMAN, scroll=True)
-    self._version_commit_label = UnifiedLabel("", font_size=36, text_color=rl.GRAY, font_weight=FontWeight.ROMAN, max_width=480, wrap_text=False)
+    self._version_commit_label = UnifiedLabel("", font_size=42, text_color=rl.GRAY, font_weight=FontWeight.ROMAN, max_width=480, wrap_text=False)
 
     self._wake_pending = True  # greet on boot
     self._wake_start: float | None = None
@@ -228,33 +228,15 @@ class MiciHomeLayout(Widget):
     self._openpilot_label.render()
     self._fade_in(rl.Rectangle(self.rect.x, title_y, self.rect.width, self._openpilot_label.font_size + 16), title_progress)
 
-    if self._version_text is not None:
-      # release branch
-      release_branch = self._version_text[1] in RELEASE_BRANCHES
+    # fork look: just the commit hash under the title, big - no version/date/branch row. It still
+    # takes part in the wake animation by sliding and fading on the version timing.
+    if self._version_text is not None and self._version_text[1] not in RELEASE_BRANCHES:
       version_progress = self._wake_progress(*WAKE_VERSION[:2])
       version_y = text_pos.y + self._openpilot_label.font_size + 16 + WAKE_VERSION[2] * (1.0 - version_progress) ** 3
-      version_pos = rl.Rectangle(text_pos.x, version_y, 100, 44)
-      self._version_label.set_text(self._version_text[0])
-      self._version_label.set_position(version_pos.x, version_pos.y)
-      self._version_label.render()
-
-      self._date_label.set_text(" " + self._version_text[3])
-      self._date_label.set_position(version_pos.x + self._version_label.text_width + 10, version_pos.y)
-      self._date_label.render()
-
-      self._branch_label.set_max_width(gui_app.width - self._version_label.text_width - self._date_label.text_width - 32)
-      self._branch_label.set_text(" " + ("release" if release_branch else self._version_text[1]))
-      self._branch_label.set_position(version_pos.x + self._version_label.text_width + self._date_label.text_width + 20, version_pos.y)
-      self._branch_label.render()
-
-      if not release_branch:
-        # 2nd line
-        self._version_commit_label.set_text(self._version_text[2])
-        self._version_commit_label.set_position(version_pos.x, version_pos.y + self._date_label.font_size + 7)
-        self._version_commit_label.render()
-
-      version_h = self._date_label.font_size * (1 if release_branch else 2) + 7
-      self._fade_in(rl.Rectangle(self.rect.x, version_y, self.rect.width, version_h), version_progress)
+      self._version_commit_label.set_text(self._version_text[2])
+      self._version_commit_label.set_position(text_pos.x, version_y)
+      self._version_commit_label.render()
+      self._fade_in(rl.Rectangle(self.rect.x, version_y, self.rect.width, self._version_commit_label.font_size + 7), version_progress)
 
     # ***** Center-aligned bottom section icons *****
     usb_connected = ui_state.usb_connected
