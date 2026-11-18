@@ -355,9 +355,12 @@ class AugmentedRoadView(CameraView):
     dm_size = self._driver_state_renderer.rect.width
     self._driver_state_renderer.set_position(left_rect.x + (left_rect.width - dm_size) / 2, left_rect.y + 36 - dm_size / 2)
     self._driver_state_renderer.render()
-    self._long_indicator.set_should_draw(not show_navigation or not self._hud_renderer.drawing_top_icons())
+    # Fork decision (c2f8c0ebd "vibed: less clutter"): the longitudinal indicator and the steering
+    # wheel are not drawn either - the fork's hud_renderer never drew a wheel at all. Keep the calls
+    # out so the side panel stays empty like it was before the merge.
+    self._long_indicator.set_should_draw(False)
     self._long_indicator.render(left_rect)
-    self._hud_renderer.render_steering_wheel(left_rect)
+    # self._hud_renderer.render_steering_wheel(left_rect)
 
   def close(self):
     self._navigation.close()
