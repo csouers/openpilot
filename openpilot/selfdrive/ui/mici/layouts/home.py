@@ -160,13 +160,15 @@ class MiciHomeLayout(Widget):
     self._large_version_label = UnifiedLabel("", font_size=64, text_color=rl.GRAY, font_weight=FontWeight.ROMAN, max_width=480, wrap_text=False)
     self._date_label = UnifiedLabel("", font_size=36, text_color=rl.GRAY, font_weight=FontWeight.ROMAN, max_width=480, wrap_text=False)
     self._branch_label = UnifiedLabel("", font_size=36, text_color=rl.GRAY, font_weight=FontWeight.ROMAN, scroll=True)
-    self._version_commit_label = UnifiedLabel("", font_size=36, text_color=rl.GRAY, font_weight=FontWeight.ROMAN, max_width=480, wrap_text=False)
+    self._version_commit_label = UnifiedLabel("", font_size=42, text_color=rl.GRAY, font_weight=FontWeight.ROMAN, max_width=480, wrap_text=False)
 
-    self._wake_pending = True  # greet on boot
+    # fork: no wake animation, the home screen is drawn statically (see _render)
+    self._wake_pending = False
     self._wake_start: float | None = None
 
   def play_wake_animation(self):
-    self._wake_pending = True
+    # upstream greets on ignition-on; the fork's home has no animation to play
+    pass
 
   def _wake_progress(self, start: float, duration: float) -> float:
     if self._wake_start is None:
@@ -215,46 +217,19 @@ class MiciHomeLayout(Widget):
     return version, branch, commit[:7], date_str
 
   def _render(self, _):
-    # start once home is actually on screen, e.g. after swiping past boot alerts
-    if self._wake_pending and abs(self.rect.x) < self.rect.width / 2:
-      self._wake_pending = False
-      self._wake_start = rl.get_time()
-
     # TODO: why is there extra space here to get it to be flush?
     text_pos = rl.Vector2(self.rect.x - 2 + HOME_PADDING, self.rect.y - 16)
-    title_progress = self._wake_progress(*WAKE_TITLE[:2])
-    title_y = text_pos.y + WAKE_TITLE[2] * (1.0 - title_progress) ** 3
-    self._openpilot_label.set_position(text_pos.x, title_y)
+    self._openpilot_label.set_position(text_pos.x, text_pos.y)
     self._openpilot_label.render()
-    self._fade_in(rl.Rectangle(self.rect.x, title_y, self.rect.width, self._openpilot_label.font_size + 16), title_progress)
 
+    # fork: the commit hash, big, on the second line - no version/date/branch row (upstream's
+    # version row and its fade-in wake animation are kept only as unused labels/methods)
     if self._version_text is not None:
-      # release branch
-      release_branch = self._version_text[1] in RELEASE_BRANCHES
-      version_progress = self._wake_progress(*WAKE_VERSION[:2])
-      version_y = text_pos.y + self._openpilot_label.font_size + 16 + WAKE_VERSION[2] * (1.0 - version_progress) ** 3
-      version_pos = rl.Rectangle(text_pos.x, version_y, 100, 44)
-      self._version_label.set_text(self._version_text[0])
-      self._version_label.set_position(version_pos.x, version_pos.y)
-      self._version_label.render()
-
-      self._date_label.set_text(" " + self._version_text[3])
-      self._date_label.set_position(version_pos.x + self._version_label.text_width + 10, version_pos.y)
-      self._date_label.render()
-
-      self._branch_label.set_max_width(gui_app.width - self._version_label.text_width - self._date_label.text_width - 32)
-      self._branch_label.set_text(" " + ("release" if release_branch else self._version_text[1]))
-      self._branch_label.set_position(version_pos.x + self._version_label.text_width + self._date_label.text_width + 20, version_pos.y)
-      self._branch_label.render()
-
-      if not release_branch:
-        # 2nd line
+      version_pos = rl.Rectangle(text_pos.x, text_pos.y + self._openpilot_label.font_size + 16, 100, 44)
+      if self._version_text[1] not in RELEASE_BRANCHES:
         self._version_commit_label.set_text(self._version_text[2])
-        self._version_commit_label.set_position(version_pos.x, version_pos.y + self._date_label.font_size + 7)
+        self._version_commit_label.set_position(version_pos.x, version_pos.y)
         self._version_commit_label.render()
-
-      version_h = self._date_label.font_size * (1 if release_branch else 2) + 7
-      self._fade_in(rl.Rectangle(self.rect.x, version_y, self.rect.width, version_h), version_progress)
 
     # ***** Center-aligned bottom section icons *****
     usb_connected = ui_state.usb_connected
@@ -278,11 +253,3 @@ class MiciHomeLayout(Widget):
     self._alerts_pill.set_position(self.rect.x + self.rect.width - self._alerts_pill.rect.width - HOME_PADDING,
                                    self.rect.y + self.rect.height - self._alerts_pill.rect.height)
     self._alerts_pill.render()
-
-    # status icons fade in one after another, alerts pill last
-    if self._wake_start is not None:
-      icons = [w.rect for w in self._status_bar_layout.widgets if w.is_visible] + [self._alerts_pill.rect]
-      for i, rect in enumerate(icons):
-        self._fade_in(rect, self._wake_progress(WAKE_ICONS_START + i * WAKE_ICON_STAGGER, WAKE_ICON_DURATION))
-      if self._wake_progress(WAKE_ICONS_START + len(icons) * WAKE_ICON_STAGGER, WAKE_ICON_DURATION) >= 1.0:
-        self._wake_start = None
