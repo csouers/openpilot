@@ -272,8 +272,7 @@ class HudRenderer(Widget):
   def _draw_set_speed(self, rect: rl.Rectangle) -> None:
     """Draw the MAX speed indicator box."""
     # fork: the MAX indicator stays up while it may be drawn (7cd4f5d45 dropped the 2.5 s persistence)
-    alpha = self._set_speed_alpha_filter.update(float(self._can_draw_top_icons))
-    alpha = self._set_speed_alpha = alpha * (1 - status_fade.weight(UIStatus.DISENGAGED))
+    alpha = self._set_speed_alpha = self._set_speed_alpha_filter.update(float(self._can_draw_top_icons))
     if alpha < 1e-2:
       return
 
