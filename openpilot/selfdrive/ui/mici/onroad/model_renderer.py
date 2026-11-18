@@ -284,12 +284,14 @@ class ModelRenderer(BaseModelRenderer):
       if i in (1, 2):
         line_width_factor = 0.16
       lane_line.projected_points = self._map_line_to_polygon(
-        lane_line.raw_points, line_width_factor * self._lane_line_probs[i], 0.0, max_idx
+        lane_line.raw_points, line_width_factor * self._lane_line_probs[i], self._path_offset_z, max_idx
       )
 
     # Update road edges using raw points (narrower than lane lines)
     for road_edge in self._road_edges:
-      road_edge.projected_points = self._map_line_to_polygon(road_edge.raw_points, ROAD_EDGE_WIDTH, 0.0, max_idx)
+      # z_off must be the camera height, like the path: at z = 0 every road-plane point projects onto
+      # the horizon (y = cy), collapsing the polygon to a 1 px line
+      road_edge.projected_points = self._map_line_to_polygon(road_edge.raw_points, ROAD_EDGE_WIDTH, self._path_offset_z, max_idx)
 
     # Update path using raw points
     if lead and lead.present:
