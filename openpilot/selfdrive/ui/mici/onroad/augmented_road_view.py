@@ -287,7 +287,7 @@ class AugmentedRoadView(CameraView):
 
     # Show blind-spot alerts on the corresponding screen edge.
     sm = ui_state.sm
-    bsm_valid = sm.valid['carState'] and sm.recv_frame['carState'] >= ui_state.started_frame
+    bsm_valid = sm.valid['carState'] and ui_state.received_since_started("carState")
     cs = sm['carState']
     left_slide = self._bsm_left_slide.update(float(bsm_valid and cs.leftBlindspot))
     right_slide = self._bsm_right_slide.update(float(bsm_valid and cs.rightBlindspot))

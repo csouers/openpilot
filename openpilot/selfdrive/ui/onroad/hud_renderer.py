@@ -75,7 +75,7 @@ class HudRenderer(Widget):
       self.speed = 0.0
       return
 
-    if sm.recv_frame['selfdriveState'] >= ui_state.started_frame:
+    if ui_state.received_since_started('selfdriveState'):
       self._experimental_mode = bool(sm['selfdriveState'].experimentalMode)
 
     car_state = sm['carState']
