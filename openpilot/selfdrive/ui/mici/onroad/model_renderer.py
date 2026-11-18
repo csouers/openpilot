@@ -192,7 +192,7 @@ class ModelRenderer(BaseModelRenderer):
       self._update_lead_bars(sm)
       self._draw_lead_indicator()
     else:
-      self._lead_bars = [LeadVehicle(), LeadVehicle()]
+      self._lead_vehicles = [LeadVehicle(), LeadVehicle()]
       self._stop_point = StopPoint()
 
   def _update_lead_bars(self, sm):
@@ -232,7 +232,7 @@ class ModelRenderer(BaseModelRenderer):
         lead.icon_width = 0.0
 
     # the radar is at the front of the car, which is what stops at the planned stop
-    lead_distances = [d_rel for present, d_rel, _ in leads if present]
+    lead_distances = [lead[2] for lead in leads if lead[0]]
     planning_stop = self._stop_point.update(sm['modelV2'], sm.updated['modelV2'], cs.vEgo, lead_distances)
     d_stop = self._stop_point.d + RADAR_TO_CAMERA
     visible = available and planning_stop and d_stop < MAX_DRAW_DISTANCE and len(lane) > 0
