@@ -226,19 +226,18 @@ class TorqueBar(Widget):
       end_grad_pt = (cx * (1 - 0.65) + (max(bg_pts[:, 0]) * 0.65) - rect.x) / rect.width
 
     # fade to orange as we approach max torque
+    # the growing fill is always fully opaque (only the show/hide fade touches it)
+    fill_alpha = int(255 * line_alpha)
     start_color = blend_colors(
-      rl.Color(255, 255, 255, int(255 * 0.9 * line_alpha)),
-      rl.Color(255, 200, 0, int(255 * line_alpha)),  # yellow
+      rl.Color(255, 255, 255, fill_alpha),
+      rl.Color(255, 200, 0, fill_alpha),  # yellow
       max(0, abs(self._torque_filter.x) - 0.75) * 4,
     )
     end_color = blend_colors(
-      rl.Color(255, 255, 255, int(255 * 0.9 * line_alpha)),
-      rl.Color(255, 115, 0, int(255 * line_alpha)),  # orange
+      rl.Color(255, 255, 255, fill_alpha),
+      rl.Color(255, 115, 0, fill_alpha),  # orange
       max(0, abs(self._torque_filter.x) - 0.75) * 4,
     )
-
-    dimmed = rl.Color(255, 255, 255, int(255 * 0.35 * line_alpha))
-    start_color, end_color = blend_colors(dimmed, start_color, engaged), blend_colors(dimmed, end_color, engaged)
 
     gradient = Gradient(
       start=(start_grad_pt, 0),
