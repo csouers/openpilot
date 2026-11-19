@@ -10,7 +10,7 @@ from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.layouts import HBoxLayout
 from openpilot.system.ui.widgets.icon_widget import IconWidget
 from openpilot.system.ui.widgets.label import UnifiedLabel, gui_label
-from openpilot.system.ui.lib.application import gui_app, FontWeight, MousePos, TextAlignment, TextAlignmentVertical
+from openpilot.system.ui.lib.application import gui_app, FontWeight, MouseEvent, MousePos, TextAlignment, TextAlignmentVertical
 from openpilot.selfdrive.ui.ui_state import ui_state, ChestnutState
 from openpilot.common.version import RELEASE_BRANCHES
 
@@ -18,6 +18,13 @@ HEAD_BUTTON_FONT_SIZE = 40
 HOME_PADDING = 8
 ALERTS_ZONE_WIDTH = 180
 SETTINGS_HIT_PAD = 12  # the settings icon is small, so give it a more forgiving touch target
+
+# Edge swipe to open settings, same scheme as NavWidget's swipe away (nav_widget.py):
+# the gesture has to start in an edge band, sideways drift cancels it, and it has to travel
+# far enough toward the middle of the screen before the release counts.
+EDGE_SWIPE_START_PX = 40  # band at the top and bottom edge where a pull can begin
+EDGE_SWIPE_DISTANCE_PX = 80  # travel toward the middle to open settings on release
+EDGE_SWIPE_BLOCK_PX = 60  # sideways drift that cancels the gesture
 
 # wake animation: (start, duration, slide distance) in seconds and px
 WAKE_TITLE = (0.0, 0.8, 44)
@@ -135,6 +142,10 @@ class MiciHomeLayout(Widget):
     self._on_dismiss_click: Callable | None = None
     self._alert_count_callback: Callable[[], int] | None = None
 
+    # edge swipe state: +1 pulling down from the top edge, -1 pulling up from the bottom edge
+    self._edge_swipe_start: MousePos | None = None
+    self._edge_swipe_band = 0
+
     self._version_text = self._get_version_text()
 
     self._usb_icon = IconWidget("icons_mici/usb.png", (62, 40))
@@ -192,6 +203,32 @@ class MiciHomeLayout(Widget):
     self._alert_count_callback = alert_count_callback
     self._alerts_pill.set_alert_count_callback(alert_count_callback, alert_icon_callback)
 
+  def _edge_band(self, y: float) -> int:
+    relative_y = y - self.rect.y
+    if relative_y < EDGE_SWIPE_START_PX:
+      return 1
+    if relative_y > self.rect.height - EDGE_SWIPE_START_PX:
+      return -1
+    return 0
+
+  def _edge_swipe_travel(self, y: float) -> float:
+    if self._edge_swipe_start is None:
+      return 0.0
+    return (y - self._edge_swipe_start.y) * self._edge_swipe_band
+
+  def _handle_mouse_press(self, mouse_pos: MousePos):
+    self._edge_swipe_band = self._edge_band(mouse_pos.y)
+    self._edge_swipe_start = mouse_pos if self._edge_swipe_band else None
+
+  def _handle_mouse_event(self, mouse_event: MouseEvent):
+    if self._edge_swipe_start is None:
+      return
+    # sideways drift or a pull away from the middle means this isn't an edge swipe
+    if abs(mouse_event.pos.x - self._edge_swipe_start.x) > EDGE_SWIPE_BLOCK_PX:
+      self._edge_swipe_start = None
+    elif self._edge_swipe_travel(mouse_event.pos.y) < -EDGE_SWIPE_BLOCK_PX:
+      self._edge_swipe_start = None
+
   def _settings_icon_hit(self, mouse_pos: MousePos) -> bool:
     icon = self._settings_icon.rect
     hit_rect = rl.Rectangle(icon.x - SETTINGS_HIT_PAD, icon.y - SETTINGS_HIT_PAD,
@@ -199,6 +236,14 @@ class MiciHomeLayout(Widget):
     return rl.check_collision_point_rec(rl.Vector2(mouse_pos.x, mouse_pos.y), hit_rect)
 
   def _handle_mouse_release(self, mouse_pos: MousePos):
+    # an edge swipe opens settings outright and never doubles as a tap
+    if self._edge_swipe_start is not None and self._edge_swipe_travel(mouse_pos.y) > EDGE_SWIPE_DISTANCE_PX:
+      self._edge_swipe_start = None
+      if self._on_settings_click:
+        self._on_settings_click()
+      return
+    self._edge_swipe_start = None
+
     relative_x = mouse_pos.x - self.rect.x
     has_alerts = self._alert_count_callback and self._alert_count_callback() > 0
     if has_alerts and relative_x > self.rect.width - ALERTS_ZONE_WIDTH:
