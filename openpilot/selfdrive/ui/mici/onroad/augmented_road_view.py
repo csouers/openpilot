@@ -286,6 +286,7 @@ class AugmentedRoadView(CameraView):
       self._calc_frame_matrix(self._content_rect)
 
     # Draw all UI overlays
+    self._model_renderer.set_alert_present(alert_to_render is not None)
     self._model_renderer.render(self._content_rect)
 
     # Fade out bottom of overlays for looks
