@@ -4,7 +4,7 @@ from openpilot.cereal import log
 from opendbc.car.structs import car
 from openpilot.cereal.visionipc import VisionStreamType
 from openpilot.selfdrive.ui.ui_state import ui_state, UIStatus
-from openpilot.selfdrive.ui.mici.onroad import SIDE_PANEL_WIDTH
+from openpilot.selfdrive.ui.mici.onroad import SIDE_PANEL_WIDTH, draw_bar_shadow
 from openpilot.selfdrive.ui.mici.onroad.alert_renderer import AlertRenderer
 from openpilot.selfdrive.ui.mici.onroad.driver_state import DriverStateRenderer
 from openpilot.selfdrive.ui.mici.onroad.status import status_fade
@@ -314,12 +314,14 @@ class AugmentedRoadView(CameraView):
       indicator_y = self._content_rect.y + (self._content_rect.height - indicator_height) / 2
       if left_slide > 0.001:
         indicator_x = self._content_rect.x + 8 - (indicator_width + 8) * (1 - left_slide)
-        rl.draw_rectangle_rounded(rl.Rectangle(indicator_x, indicator_y,
-                                                indicator_width, indicator_height), 1.0, 10, bsm_color)
+        bar = rl.Rectangle(indicator_x, indicator_y, indicator_width, indicator_height)
+        draw_bar_shadow(bar, 1.0, 10, left_slide)
+        rl.draw_rectangle_rounded(bar, 1.0, 10, bsm_color)
       if right_slide > 0.001:
         indicator_x = self._content_rect.x + self._content_rect.width - indicator_width - 8 + (indicator_width + 8) * (1 - right_slide)
-        rl.draw_rectangle_rounded(rl.Rectangle(indicator_x,
-                                                indicator_y, indicator_width, indicator_height), 1.0, 10, bsm_color)
+        bar = rl.Rectangle(indicator_x, indicator_y, indicator_width, indicator_height)
+        draw_bar_shadow(bar, 1.0, 10, right_slide)
+        rl.draw_rectangle_rounded(bar, 1.0, 10, bsm_color)
 
     # Draw fake rounded border
     rl.draw_rectangle_rounded_lines_ex(self._content_rect, 0.2 * 1.02, 10, 50, rl.BLACK)

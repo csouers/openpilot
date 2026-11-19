@@ -3,7 +3,7 @@ import numpy as np
 import raylib_nb as rl
 from dataclasses import dataclass
 from openpilot.common.constants import CV
-from openpilot.selfdrive.ui.mici.onroad import DIMMED_ICON_ALPHA
+from openpilot.selfdrive.ui.mici.onroad import DIMMED_ICON_ALPHA, draw_icon_shadow
 from openpilot.selfdrive.ui.mici.onroad.status import STATUS_FADE_RC, lerp_color, status_fade
 from openpilot.selfdrive.ui.mici.onroad.torque_bar import TorqueBar
 from openpilot.selfdrive.ui.ui_state import ui_state, UIStatus, ChestnutState
@@ -240,6 +240,8 @@ class HudRenderer(Widget):
     center_x = rect.x + rect.width - self._right_panel_width - self.CHESTNUT_CENTER_MARGIN_RIGHT
     pos = rl.Vector2(center_x - icon.width / 2,
                      self.chestnut_center_y(rect) - icon.height / 2 + slide)
+    draw_icon_shadow(rl.Vector2(pos.x + icon.width / 2, pos.y + icon.height / 2),
+                     max(icon.width, icon.height) * 0.7, alpha * opacity)
     rl.draw_texture_ex(icon, pos, 0.0, 1.0, rl.Color(255, 255, 255, int(255 * opacity * alpha)))
 
   def _draw_steering_wheel(self, rect: rl.Rectangle) -> None:

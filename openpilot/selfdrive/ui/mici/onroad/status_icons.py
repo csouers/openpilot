@@ -2,6 +2,7 @@ import raylib_nb as rl
 
 from openpilot.cereal import log
 from openpilot.common.filter_simple import FirstOrderFilter
+from openpilot.selfdrive.ui.mici.onroad import draw_icon_shadow
 from openpilot.selfdrive.ui.mici.onroad.compass import Compass
 from openpilot.selfdrive.ui.mici.onroad.hud_renderer import HudRenderer
 from openpilot.selfdrive.ui.ui_state import ui_state
@@ -99,4 +100,5 @@ class StatusIconColumn(Widget):
     center_x += (1.0 - slide) * (COMPASS_W / 2 + self._experimental_texture.width)
     center = rl.Vector2(center_x, center_y)
 
+    draw_icon_shadow(center, max(self._experimental_texture.width, self._experimental_texture.height) * 0.7, slide)
     self._draw_texture_centered(self._experimental_texture, center, EXPERIMENTAL_MODE_ICON_COLOR)

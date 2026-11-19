@@ -1,6 +1,7 @@
 import raylib_nb as rl
 
 from openpilot.common.filter_simple import FirstOrderFilter
+from openpilot.selfdrive.ui.mici.onroad import draw_icon_shadow
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.application import gui_app, FontWeight, TextAlignment, TextAlignmentVertical
 from openpilot.system.ui.widgets import Widget
@@ -76,5 +77,7 @@ class Compass(Widget):
     slide_rect = rl.Rectangle(self._rect.x,
                               self._rect.y - (1.0 - slide) * (self._rect.y + self._rect.height),
                               self._rect.width, self._rect.height)
+    draw_icon_shadow(rl.Vector2(slide_rect.x + slide_rect.width / 2, slide_rect.y + slide_rect.height / 2),
+                     min(slide_rect.width, slide_rect.height) * 0.55, slide)
     self._label.set_text_color(rl.Color(255, 255, 255, 235))
     self._label.render(slide_rect)
