@@ -17,6 +17,7 @@ from openpilot.common.version import RELEASE_BRANCHES
 HEAD_BUTTON_FONT_SIZE = 40
 HOME_PADDING = 8
 ALERTS_ZONE_WIDTH = 180
+SETTINGS_HIT_PAD = 12  # the settings icon is small, so give it a more forgiving touch target
 
 # wake animation: (start, duration, slide distance) in seconds and px
 WAKE_TITLE = (0.0, 0.8, 44)
@@ -131,6 +132,7 @@ class MiciHomeLayout(Widget):
     super().__init__()
     self._on_settings_click: Callable | None = None
     self._on_alerts_click: Callable | None = None
+    self._on_dismiss_click: Callable | None = None
     self._alert_count_callback: Callable[[], int] | None = None
 
     self._version_text = self._get_version_text()
@@ -144,8 +146,9 @@ class MiciHomeLayout(Widget):
 
     self._alerts_pill = AlertsPill()
 
+    self._settings_icon = IconWidget("icons_mici/settings.png", (48, 48), opacity=0.9)
     self._status_bar_layout = HBoxLayout([
-      IconWidget("icons_mici/settings.png", (48, 48), opacity=0.9),
+      self._settings_icon,
       NetworkIcon(),
       self._usb_icon,
       self._chestnut_icon,
@@ -180,12 +183,20 @@ class MiciHomeLayout(Widget):
       rl.draw_rectangle_rec(rect, rl.Color(0, 0, 0, int(255 * (1.0 - progress))))
 
   def set_callbacks(self, on_settings: Callable | None = None, on_alerts: Callable | None = None,
+                    on_dismiss: Callable | None = None,
                     alert_count_callback: Callable[[], int] | None = None,
                     alert_icon_callback: Callable[[], rl.Texture | None] | None = None):
     self._on_settings_click = on_settings
     self._on_alerts_click = on_alerts
+    self._on_dismiss_click = on_dismiss
     self._alert_count_callback = alert_count_callback
     self._alerts_pill.set_alert_count_callback(alert_count_callback, alert_icon_callback)
+
+  def _settings_icon_hit(self, mouse_pos: MousePos) -> bool:
+    icon = self._settings_icon.rect
+    hit_rect = rl.Rectangle(icon.x - SETTINGS_HIT_PAD, icon.y - SETTINGS_HIT_PAD,
+                            icon.width + 2 * SETTINGS_HIT_PAD, icon.height + 2 * SETTINGS_HIT_PAD)
+    return rl.check_collision_point_rec(rl.Vector2(mouse_pos.x, mouse_pos.y), hit_rect)
 
   def _handle_mouse_release(self, mouse_pos: MousePos):
     relative_x = mouse_pos.x - self.rect.x
@@ -193,8 +204,12 @@ class MiciHomeLayout(Widget):
     if has_alerts and relative_x > self.rect.width - ALERTS_ZONE_WIDTH:
       if self._on_alerts_click:
         self._on_alerts_click()
-    elif self._on_settings_click:
-      self._on_settings_click()
+    elif self._settings_icon_hit(mouse_pos):
+      if self._on_settings_click:
+        self._on_settings_click()
+    elif self._on_dismiss_click:
+      # anywhere else on home goes back to the driving view
+      self._on_dismiss_click()
 
   def _get_version_text(self) -> tuple[str, str, str, str] | None:
     version = ui_state.params.get("Version")
