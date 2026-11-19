@@ -195,6 +195,17 @@ class AugmentedRoadView(CameraView):
 
     self._fade_texture = gui_app.texture("icons_mici/onroad/onroad_fade.png")
 
+    # Press and hold anywhere on the road view to toggle the camera feed live (no menu entry).
+    self.set_long_press_callback(self._on_long_press)
+
+  def _on_long_press(self):
+    # don't fire while the user is dragging the bookmark gesture
+    if self._bookmark_icon.interacting():
+      return
+    new_state = not ui_state.road_camera_view
+    ui_state.params.put_bool("RoadCameraView", new_state, block=True)
+    ui_state.road_camera_view = new_state
+
   def is_swiping_left(self) -> bool:
     """Check if currently swiping left (for scroller to disable)."""
     return self._bookmark_icon.is_swiping_left()

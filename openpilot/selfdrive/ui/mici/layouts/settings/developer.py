@@ -85,9 +85,6 @@ class DeveloperLayoutMici(NavScroller):
                                                     "Braking (AEB).")
     self._navigation_toggle = BigParamControl("navigation (alpha)", "NavigationEnabled",
                                               description="Turn-by-turn navigation with a route map. Set a destination from comma connect.")
-    self._camera_toggle = BigParamControl("road camera view", "RoadCameraView",
-                                          description="Show the road camera feed behind the driving UI.")
-    self._camera_toggle.set_checked(ui_state.road_camera_view)
     self._debug_mode_toggle = BigParamControl("ui debug mode", "ShowDebugInfo",
                                               toggle_callback=lambda checked: (gui_app.set_show_touches(checked), gui_app.set_show_fps(checked)),
                                               description="Show touch locations and the UI frame rate.")
@@ -102,7 +99,6 @@ class DeveloperLayoutMici(NavScroller):
       self._alpha_long_toggle,
       self._debug_mode_toggle,
       self._navigation_toggle,
-      self._camera_toggle,
     ])
 
     # Toggle lists
@@ -170,7 +166,6 @@ class DeveloperLayoutMici(NavScroller):
     # Refresh toggles from params to mirror external changes
     for key, item in self._refresh_toggles:
       item.set_checked(ui_state.params.get_bool(key))
-    self._camera_toggle.set_checked(ui_state.road_camera_view)
 
   def _on_joystick_debug_mode(self, state: bool):
     ui_state.params.put_bool("JoystickDebugMode", state, block=True)
