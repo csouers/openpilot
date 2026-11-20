@@ -309,9 +309,11 @@ class ModelRenderer(BaseModelRenderer):
     # green to match the other engaged-green elements (lane lines, path)
     offset = np.array([self._rect.x, self._rect.y], dtype=np.float32)
     for lead in self._lead_vehicles:
-      # bar geometry is kept for icon anchoring, but no longer drawn
       if lead.fade_filter.x <= 0.0 or lead.icon_width <= 0.0:
         continue
+
+      # A lead is shown as the car itself. The bar is for a planned stop with no
+      # car in front (a stop sign, a traffic light): see the stop point below.
       # solid car when the radar confirms the lead, dashed ghost for vision-only
       # (hondacan.py HUD_LEAD: 2=solid radar-fixed, 1=dashed ghost)
       texture = self._txt_lead_car if lead.radar else self._txt_lead_car_ghost
@@ -323,7 +325,8 @@ class ModelRenderer(BaseModelRenderer):
       rl.draw_texture_pro(texture, src, dst, rl.Vector2(0, 0), 0.0,
                           rl.Color(255, 255, 255, round(255 * lead.fade_filter.x)))
 
-    # planned stop with no lead to stop behind (upstream's stop bar)
+    # the bar is the stop indicator: a planned stop with no car to stop behind
+    # (a stop sign or a light), which is why it never draws behind a lead
     if self._stop_point.fade_filter.x > 0.0:
       offset = self._draw_offset()
       draw_polygon(self._rect, self._stop_point.bar + offset,
