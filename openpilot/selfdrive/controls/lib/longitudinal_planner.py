@@ -17,8 +17,9 @@ from openpilot.common.swaglog import cloudlog
 
 # Fork: upstream's curve decays hard with speed (1.6 -> 0.6 m/s^2), which reads as "pulls then gives
 # up". Measured on the car (rlog, flat ground): the plant delivers ~0.023 m/s^2 per gas unit at any
-# speed, so gas is linear in requested accel and 2.0 m/s^2 only needs gas ~88 (table max 160).
-A_CRUISE_MAX_VALS = [2.0, 1.6, 1.1, 0.8]
+# speed, so gas is linear in requested accel. This is half of 14a148543's raise over upstream
+# (2.0/1.6/1.1/0.8): the full step felt like too much, so the delta is halved, not the curve.
+A_CRUISE_MAX_VALS = [1.8, 1.4, 0.95, 0.7]
 A_CRUISE_MAX_BP = [0., 10.0, 25., 40.]
 J_CRUISE_VALS = [1.6, 1.2, 0.8, 0.6]
 J_CRUISE_BP = [0., 10.0, 25., 40.]
