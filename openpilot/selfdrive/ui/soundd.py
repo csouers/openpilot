@@ -88,6 +88,11 @@ class Soundd:
     self.selfdrive_timeout_alert = False
     self.pending_stop = False
 
+    # fork: the jetlink host on the comma's USB port (the "GPU") joining or
+    # leaving is audible — plugging it in plays the engage tone, pulling it out
+    # plays disengage. None until the first status read: no sound at startup.
+    self.jetlink_present: bool | None = None
+
     self.spl_filter_weighted = FirstOrderFilter(0, 2.5, FILTER_DT, initialized=False)
 
   def load_sounds(self):
@@ -156,6 +161,25 @@ class Soundd:
       self.current_sound = new_alert
       self.current_sound_frame = 0
 
+  def update_jetlink_sound(self) -> None:
+    """Play engage when the jetlink host appears on the port and disengage when
+    it goes, as a plug is otherwise silent. Never raises: the adapter answers as
+    if the link were off when jetlink is absent or speaks another API."""
+    try:
+      from openpilot import jetlink_adapter
+      status = jetlink_adapter.status()
+    except Exception:
+      return
+    if status is None:
+      # the link is off in params: no presence to track, and no tone on the way back
+      self.jetlink_present = None
+      return
+    present = bool(status.present)
+    previous, self.jetlink_present = self.jetlink_present, present
+    if previous is None or present == previous:
+      return
+    self.update_alert(AudibleAlert.engage if present else AudibleAlert.disengage)
+
   def get_audible_alert(self, sm):
     if sm.updated['selfdriveState']:
       new_alert = sm['selfdriveState'].alertSound.raw
@@ -199,6 +223,7 @@ class Soundd:
             self.current_volume = self.calculate_volume(float(self.spl_filter_weighted.x))
 
         self.get_audible_alert(sm)
+        self.update_jetlink_sound()
 
         if self.current_alert in critical_max_sounds:
           elapsed = time.monotonic() - self.ramp_start_time
