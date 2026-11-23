@@ -20,7 +20,14 @@ def notcar(started: bool, params: Params, CP: car.CarParams) -> bool:
 def iscar(started: bool, params: Params, CP: car.CarParams) -> bool:
   return started and not CP.notCar
 
+# recording opt-out: the file gates loggerd for every car, not just notCar. Conditions are
+# re-evaluated on every manager loop, so touch/rm toggles recording without a restart. Nothing
+# recorded means there is nothing for the uploader to send.
+NO_LOGGING_FILE = "/data/no_logging"
+
 def logging(started: bool, params: Params, CP: car.CarParams) -> bool:
+  if os.path.exists(NO_LOGGING_FILE):
+    return False
   run = (not CP.notCar) or not params.get_bool("DisableLogging")
   return started and run
 
