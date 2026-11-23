@@ -104,7 +104,7 @@ def _adapter_class():
       # is no car, so card never publishes carState and the large model would
       # wait for a swap window that never opens ('re-engage to switch'). The file
       # says this bench has nothing steering or able to; stock's rule otherwise.
-      if os.path.exists('/data/bench_swap_ok'):
+      if os.path.exists('/data/bench_mode'):
         return False
       return super().in_control()
 

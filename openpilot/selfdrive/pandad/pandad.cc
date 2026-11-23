@@ -366,9 +366,10 @@ void pandad_run(Panda *panda) {
       if (sm.updated("deviceState")) {
         is_onroad = sm["deviceState"].getDeviceState().getStarted();
       }
-      // the STARTED spoof is fixed at startup; the bench file is re-checked every cycle so ignition
-      // can be cycled at 10 Hz without restarting openpilot
-      const bool force_ignition = util::file_exists("/data/force_ignition");
+      // /data/bench_mode is the one bench switch (scripts/bench/ignition.sh toggles it): the box is a
+      // GPU tool bench, so ignition is faked, nothing is recorded and jetlink may swap at any time.
+      // Re-checked every cycle, so it can be cycled at 10 Hz without restarting openpilot.
+      const bool force_ignition = util::file_exists("/data/bench_mode");
       process_panda_state(panda, &pm, engaged, is_onroad, spoofing_started || force_ignition);
       panda_safety.configureSafetyMode(is_onroad);
     }

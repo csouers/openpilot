@@ -20,10 +20,10 @@ def notcar(started: bool, params: Params, CP: car.CarParams) -> bool:
 def iscar(started: bool, params: Params, CP: car.CarParams) -> bool:
   return started and not CP.notCar
 
-# recording opt-out: the file gates loggerd for every car, not just notCar. Conditions are
-# re-evaluated on every manager loop, so touch/rm toggles recording without a restart. Nothing
-# recorded means there is nothing for the uploader to send.
-NO_LOGGING_FILE = "/data/no_logging"
+# /data/bench_mode is the one bench switch (scripts/bench/ignition.sh toggles it). In that mode
+# loggerd is gated for every car, not just notCar: nothing recorded, nothing for the uploader to
+# send. Conditions are re-evaluated on every manager loop, so touch/rm needs no restart.
+NO_LOGGING_FILE = "/data/bench_mode"
 
 def logging(started: bool, params: Params, CP: car.CarParams) -> bool:
   if os.path.exists(NO_LOGGING_FILE):
