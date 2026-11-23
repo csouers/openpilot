@@ -98,6 +98,16 @@ def _adapter_class():
       # fork has no lateral-only mode
       return bool(sm['carControl'].enabled)
 
+    def in_control(self) -> bool:
+      # Stock's rule is in control unless every IN_CONTROL_SERVICES is alive and
+      # valid, and carState is one of them. With ignition forced on a bench there
+      # is no car, so card never publishes carState and the large model would
+      # wait for a swap window that never opens ('re-engage to switch'). The file
+      # says this bench has nothing steering or able to; stock's rule otherwise.
+      if os.path.exists('/data/bench_swap_ok'):
+        return False
+      return super().in_control()
+
   return Adapter
 
 
