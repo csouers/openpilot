@@ -124,6 +124,15 @@ def owner_config():
 
 def main() -> None:
   """jetlinkd: hold the USB gadget until manager stops this process."""
+  # The gadget's read wakes are what the comma's whole-frame time waits on, and
+  # jetlinkd sits at nice 0 while modeld runs SCHED_FIFO 54 — so any other work
+  # on the box can put the USB I/O behind it. -10 keeps it ahead of ordinary
+  # processes and still below every realtime one. Not realtime itself: this is
+  # Python, and a stuck loop at FIFO would starve the box.
+  try:
+    os.nice(-10)
+  except OSError:
+    pass
   _adapter_class().main()
 
 
