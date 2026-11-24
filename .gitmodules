@@ -21,4 +21,5 @@
   branch = master
 [submodule "jetlink_repo"]
   path = jetlink_repo
-  url = https://github.com/zoompilot/jetlink.git
+  branch = lane-mask
+  url = https://github.com/csouers/jetlink.git
