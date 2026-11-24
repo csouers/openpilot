@@ -20,8 +20,13 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CameraDebugExpGain", {CLEAR_ON_MANAGER_START, STRING}},
     {"CameraDebugExpTime", {CLEAR_ON_MANAGER_START, STRING}},
     {"CarBatteryCapacity", {PERSISTENT, INT}},
-    {"CarParams", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, BYTES}},
-    {"CarParamsCache", {CLEAR_ON_MANAGER_START, BYTES}},
+    // fork: the car's params survive manager restarts and onroad flips. The bench
+    // lost them on every reboot (the four is USB-powered, so unplugging the GPU
+    // cable reboots it) and modeld then blocked on CarParams until it was seeded
+    // by hand. Chris never swaps cars without swapping branches, so a stale
+    // fingerprint is a branch problem, not a param problem.
+    {"CarParams", {PERSISTENT, BYTES}},
+    {"CarParamsCache", {PERSISTENT, BYTES}},
     {"CarParamsPersistent", {PERSISTENT, BYTES}},
     {"CarParamsPrevRoute", {PERSISTENT, BYTES}},
     {"CompletedTrainingVersion", {PERSISTENT, STRING, "0"}},
